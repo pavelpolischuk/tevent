@@ -10,8 +10,7 @@ final class HealthEndpoint[R] {
   type HealthTask[A] = RIO[R, A]
 
   private val prefixPath = "/health"
-
-  val dsl: Http4sDsl[HealthTask] = Http4sDsl[HealthTask]
+  private val dsl: Http4sDsl[HealthTask] = Http4sDsl[HealthTask]
   import dsl._
 
   private val httpRoutes = HttpRoutes.of[HealthTask] {
