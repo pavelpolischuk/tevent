@@ -1,0 +1,39 @@
+package tevent.infrastructure.repository.tables
+
+import java.time.ZonedDateTime
+
+import slick.jdbc.JdbcProfile
+import slick.lifted.ProvenShape
+import slick.sql.SqlProfile.ColumnOption.Nullable
+import tevent.domain.model.Event
+
+class EventsTable(val profile: JdbcProfile, val organizations: OrganizationsTable) {
+  import profile.api._
+
+  class Events(tag: Tag) extends Table[Event](tag, "EVENTS") {
+    def id: Rep[Long] = column("ID", O.PrimaryKey, O.AutoInc)
+    def organizationId: Rep[Long] = column("ORGANIZATION_ID")
+    def name: Rep[String] = column("NAME")
+    def datetime: Rep[ZonedDateTime] = column("DATETIME")
+    def location: Rep[Option[String]] = column("LOCATION", Nullable)
+    def capacity: Rep[Option[Int]] = column("CAPACITY", Nullable)
+    def broadcastLink: Rep[Option[String]] = column("BROADCAST_LINK", Nullable)
+
+    def organization = foreignKey("ORGANIZATION_FK", organizationId, organizations.All)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
+
+    override def * : ProvenShape[Event] = (id.?, organizationId, name, datetime, location, capacity, broadcastLink).mapTo[Event]
+  }
+
+  val All = TableQuery[Events]
+
+  def all: DBIO[Seq[Event]] = All.result
+
+  def add(event: Event): DBIO[Long] = (All returning All.map(_.id)) += event
+
+  def withId(id: Long): DBIO[Option[Event]] = All.filter(_.id === id).result.headOption
+
+  def update(event: Event): DBIO[Int] = {
+    val q = for { c <- All if c.id === event.id } yield (c.name, c.datetime, c.location, c.capacity, c.broadcastLink)
+    q.update((event.name, event.datetime, event.location, event.capacity, event.videoBroadcastLink))
+  }
+}

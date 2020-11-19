@@ -1,0 +1,28 @@
+# sbt
+bin/
+project/boot/
+project/plugins/project/
+project/target
+target/
+build/
+
+# intellij idea
+*.log
+*.iml
+*.ipr
+*.iws
+.idea
+
+# mac
+.DS_Store
+
+# other?
+.history
+.scala_dependencies
+.cache
+.cache-main
+.lib/
+META-INF/
+
+# general
+*.class
