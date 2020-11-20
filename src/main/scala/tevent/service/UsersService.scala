@@ -1,29 +1,31 @@
 package tevent.service
 
+import tevent.domain.Named.userNamed
 import tevent.domain.model.User
 import tevent.domain.repository.UsersRepository
-import tevent.domain.{DomainError, ValidationError}
+import tevent.domain.{DomainError, EntityNotFound, ValidationError}
 import zio.{IO, URLayer, ZLayer}
 
 object UsersService {
   trait Service {
-    def get(id: Long): IO[DomainError, Option[User]]
-    def login(email: String, secret: String): IO[DomainError, Option[User]]
-    def signIn(name: String, email: String, secret: String): IO[DomainError, User]
+    def get(id: Long): IO[DomainError, User]
+    def findWithEmail(email: String): IO[DomainError, User]
+    def createUser(name: String, email: String, secret: String): IO[DomainError, User]
   }
 
   class UsersServiceImpl(repository: UsersRepository.Service) extends UsersService.Service {
 
-    override def get(id: Long): IO[DomainError, Option[User]] = repository.getById(id)
+    override def get(id: Long): IO[DomainError, User] =
+      repository.getById(id).flatMap(EntityNotFound.optionToIO(id))
 
-    override def login(email: String, secret: String): IO[DomainError, Option[User]] =
-      repository.findWithEmail(email)
+    override def findWithEmail(email: String): IO[DomainError, User] =
+      repository.findWithEmail(email).flatMap(EntityNotFound.optionToIO(email))
 
-    override def signIn(name: String, email: String, secret: String): IO[DomainError, User] = {
+    override def createUser(name: String, email: String, secret: String): IO[DomainError, User] = {
       repository.findWithEmail(email).flatMap {
         case None =>
-          val user = User(id = None, name = name, email = email, secretHash = secret)
-          repository.add(user).map(id => user.copy(id = Some(id)))
+          val user = User(id = -1, name = name, email = email, secretHash = secret)
+          repository.add(user).map(id => user.copy(id = id))
 
         case _ => IO.fail(ValidationError(s"User with email <$email> exists"))
       }

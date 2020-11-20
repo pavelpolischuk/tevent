@@ -11,14 +11,15 @@ class OrganizationsTable(val profile: JdbcProfile) {
     def id: Rep[Long] = column("ID", O.PrimaryKey, O.AutoInc)
     def name: Rep[String] = column("NAME")
 
-    override def * : ProvenShape[Organization] = (id.?, name).mapTo[Organization]
+    override def * : ProvenShape[Organization] = (id, name).mapTo[Organization]
   }
 
   val All = TableQuery[Organizations]
 
   def all: DBIO[Seq[Organization]] = All.result
 
-  def add(organization: Organization): DBIO[Long] = (All returning All.map(_.id)) += organization
+  def add(organization: Organization): DBIO[Long] =
+    (All.map(o => (o.name)) returning All.map(_.id)) += (organization.name)
 
   def withId(id: Long): DBIO[Option[Organization]] = All.filter(_.id === id).result.headOption
 

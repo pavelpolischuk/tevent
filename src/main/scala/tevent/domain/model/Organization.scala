@@ -1,4 +1,4 @@
 package tevent.domain.model
 
-case class Organization(id: Option[Long],
+case class Organization(id: Long,
                         name: String)

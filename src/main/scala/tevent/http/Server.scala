@@ -4,11 +4,12 @@ import cats.data.Kleisli
 import cats.effect.ExitCode
 import cats.implicits._
 import org.http4s.implicits._
-import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.server.middleware.{AutoSlash, GZip}
+import org.http4s.server.{AuthMiddleware, Router}
 import org.http4s.{HttpRoutes, Request, Response}
-import tevent.http.endpoints.{EventsEndpoint, HealthEndpoint, OrganizationsEndpoint, UsersEndpoint}
+import tevent.domain.model.User
+import tevent.http.endpoints.{AuthEndpoint, EventsEndpoint, HealthEndpoint, OrganizationsEndpoint, UsersEndpoint}
 import tevent.infrastructure.Configuration
 import tevent.infrastructure.Environments.AppEnvironment
 import zio.interop.catz._
@@ -33,11 +34,15 @@ object Server {
       .orDie
 
   def createRoutes(basePath: String): ServerRoutes = {
+    val authEndpoint = new AuthEndpoint[AppEnvironment]
+
+    implicit val auth: AuthMiddleware[ServerRIO, User] = AuthMiddleware(authEndpoint.authUser, authEndpoint.forbidden)
+
     val usersRoutes = new UsersEndpoint[AppEnvironment].routes
     val eventsRoutes = new EventsEndpoint[AppEnvironment].routes
     val organizationsRoutes = new OrganizationsEndpoint[AppEnvironment].routes
     val healthRoutes = new HealthEndpoint[AppEnvironment].routes
-    val routes = usersRoutes <+> healthRoutes <+> organizationsRoutes <+> eventsRoutes
+    val routes = authEndpoint.routes <+> usersRoutes <+> healthRoutes <+> organizationsRoutes <+> eventsRoutes
 
     Router[ServerRIO](basePath -> middleware(routes)).orNotFound
   }

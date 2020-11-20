@@ -14,14 +14,16 @@ class UsersTable(val profile: JdbcProfile)  {
     def email: Rep[String] = column("EMAIL", O.Unique)
     def secretHash: Rep[String] = column("SECRET")
 
-    override def * : ProvenShape[User] = (id.?, name, email, secretHash).mapTo[User]
+    override def * : ProvenShape[User] = (id, name, email, secretHash).mapTo[User]
   }
 
   val All: TableQuery[Users] = TableQuery[Users]
 
   def all: DBIO[Seq[User]] = All.result
 
-  def add(user: User): DBIO[Long] = (All returning All.map(_.id)) += user
+  def add(user: User): DBIO[Long] =
+    (All.map(u => (u.name, u.email, u.secretHash)) returning All.map(_.id)) +=
+      (user.name, user.email, user.secretHash)
 
   def withId(id: Long): DBIO[Option[User]] = All.filter(_.id === id).result.headOption
 

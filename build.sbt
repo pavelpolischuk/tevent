@@ -27,6 +27,7 @@ lazy val root = (project in file("."))
       "dev.zio"               %% "zio-logging"         % "0.5.3",
       "org.scalameta"         %% "svm-subs"            % "20.2.0",
       "com.github.pureconfig" %% "pureconfig"          % "0.14.0",
+      "com.github.t3hnar"     %% "scala-bcrypt"        % "4.3.0",
       "com.h2database"        %  "h2"                  % "1.4.200"
     ),
     addCompilerPlugin("org.typelevel" %% "kind-projector"     % "0.10.3"),

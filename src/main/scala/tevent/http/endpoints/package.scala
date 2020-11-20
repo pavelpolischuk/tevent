@@ -6,7 +6,7 @@ import io.circe.{Decoder, Encoder}
 import org.http4s.circe.{jsonEncoderOf, jsonOf}
 import org.http4s.{EntityDecoder, EntityEncoder, Response}
 import org.http4s.dsl.Http4sDsl
-import tevent.domain.{DomainError, ValidationError}
+import tevent.domain.{DomainError, EntityNotFound, ValidationError}
 
 package object endpoints {
   implicit def circeJsonDecoder[F[_]: Sync, A: Decoder]: EntityDecoder[F, A] = jsonOf[F, A]
@@ -17,6 +17,7 @@ package object endpoints {
     import dsl._
 
     {
+      case e@EntityNotFound(_) => NotFound(e.message)
       case ValidationError(m) => BadRequest(m)
       case _ => InternalServerError()
     }

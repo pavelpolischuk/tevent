@@ -1,6 +1,7 @@
-POST http://localhost:8080/api/v1/users/signin
+POST http://localhost:8080/api/v1/signin
 @Content-type: application/json
-{ "name": "Paul", "email": "paul@goo.com", "secretHash": "123" }
+
+{ "name": "Paul", "email": "paul@goo.com", "secret": "123" }
 
 ###
 
