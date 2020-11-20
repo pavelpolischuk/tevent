@@ -36,15 +36,15 @@ object Crypto {
 
     override def validateSignedToken(token: String): IO[DomainError, String] =
       ZIO.succeed(token.split("-", 3)).flatMap {
-        case Array(signature, raw, nonce) => sign(f"$raw-$nonce")
+        case Array(signature, raw, nonce) => sign(s"$raw-$nonce")
           .filterOrFail[DomainError](signature.equals)(ValidationError("Invalid token")).as(raw)
         case _ => ZIO.fail(ValidationError("Invalid token format"))
       }
 
     override def signToken(token: String, nonce: String): IO[ExecutionError, String] = for {
-      joined <- IO.succeed(f"$token-$nonce")
+      joined <- IO.succeed(s"$token-$nonce")
       sign <- sign(joined)
-    } yield f"$sign-$joined"
+    } yield s"$sign-$joined"
   }
 
   val bcrypt: URLayer[Config, Crypto] =

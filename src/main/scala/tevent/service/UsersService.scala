@@ -4,11 +4,12 @@ import tevent.domain.Named.userNamed
 import tevent.domain.model.User
 import tevent.domain.repository.UsersRepository
 import tevent.domain.{DomainError, EntityNotFound, ValidationError}
-import zio.{IO, URLayer, ZLayer}
+import zio.{IO, URLayer, ZIO, ZLayer}
 
 object UsersService {
   trait Service {
     def get(id: Long): IO[DomainError, User]
+    def update(id: Long, name: String, email: String): IO[DomainError, Unit]
     def findWithEmail(email: String): IO[DomainError, User]
     def createUser(name: String, email: String, secret: String): IO[DomainError, User]
   }
@@ -30,7 +31,16 @@ object UsersService {
         case _ => IO.fail(ValidationError(s"User with email <$email> exists"))
       }
     }
+
+    override def update(id: Long, name: String, email: String): IO[DomainError, Unit] = for {
+      withNewEmail <- repository.findWithEmail(email)
+      _ <- if (withNewEmail.exists(_.id != id)) IO.fail(ValidationError(s"User with email <$email> exists"))
+           else repository.update(User(id, name, email, ""))
+    } yield ()
   }
 
   def live: URLayer[UsersRepository, UsersService] = ZLayer.fromService(new UsersServiceImpl(_))
+
+  def update(id: Long, name: String, email: String): ZIO[UsersService, DomainError, Unit] =
+    ZIO.accessM(_.get.update(id, name, email))
 }

@@ -17,13 +17,18 @@ final class UsersEndpoint[R <: UsersService] {
   private val dsl = Http4sDsl[UsersTask]
   import dsl._
 
-  implicit val userEncoder: Encoder[User] = deriveEncoder[User]
-  implicit val userDecoder: Decoder[User] = deriveDecoder[User]
+  case class UserData(name: String, email: String)
+
+  implicit val userEncoder: Encoder[UserData] = deriveEncoder[UserData]
+  implicit val userDecoder: Decoder[UserData] = deriveDecoder[UserData]
 
   private val httpRoutes = AuthedRoutes.of[User, UsersTask] {
-    case GET -> Root / LongVar(id) as user => RIO.accessM[R].apply(
-      _.get.get(id).foldM(errorMapper, Ok(_))
-    )
+    case GET -> Root / LongVar(id) as user =>
+      if (user.id == id) Ok(UserData(user.name, user.email)) else Forbidden()
+    case request@PUT -> Root / LongVar(id) as user =>
+      if (user.id != id) Forbidden() else request.req.decode[UserData] { form =>
+        UsersService.update(id, form.name, form.email).foldM(errorMapper, _ => Ok())
+      }
   }
 
   def routes(implicit middleware: AuthMiddleware[UsersTask, User]): HttpRoutes[UsersTask] = Router(

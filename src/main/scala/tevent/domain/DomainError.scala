@@ -7,7 +7,7 @@ sealed trait DomainError {
 }
 
 case class EntityNotFound[A: EntityType, B](info: B)(implicit named: EntityType[A]) extends DomainError {
-  override val message: String = f"${named.name} <$info> not found"
+  override val message: String = s"${named.name} <$info> not found"
 }
 
 object EntityNotFound {
