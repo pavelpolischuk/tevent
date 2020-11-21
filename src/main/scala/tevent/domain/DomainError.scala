@@ -19,6 +19,10 @@ object EntityNotFound {
 
 case class ValidationError(override val message: String) extends DomainError
 
+object AccessError extends DomainError {
+  override val message: String = "Forbidden"
+}
+
 case class ExecutionError(cause: Throwable) extends DomainError {
   override val message: String = cause.getMessage
 }

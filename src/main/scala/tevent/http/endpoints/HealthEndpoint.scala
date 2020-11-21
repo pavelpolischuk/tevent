@@ -7,17 +7,17 @@ import zio._
 import zio.interop.catz.core._
 
 final class HealthEndpoint[R] {
-  type HealthTask[A] = RIO[R, A]
+  type Task[A] = RIO[R, A]
 
   private val prefixPath = "/health"
-  private val dsl: Http4sDsl[HealthTask] = Http4sDsl[HealthTask]
+  private val dsl: Http4sDsl[Task] = Http4sDsl[Task]
   import dsl._
 
-  private val httpRoutes = HttpRoutes.of[HealthTask] {
+  private val httpRoutes = HttpRoutes.of[Task] {
     case GET -> Root => Ok("OK")
   }
 
-  val routes: HttpRoutes[HealthTask] = Router(
+  val routes: HttpRoutes[Task] = Router(
     prefixPath -> httpRoutes
   )
 }

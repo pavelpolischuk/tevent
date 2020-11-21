@@ -1,37 +1,39 @@
 package tevent.http.endpoints
 
-import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
-import io.circe.{Decoder, Encoder}
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.{AuthMiddleware, Router}
 import org.http4s.{AuthedRoutes, HttpRoutes}
 import tevent.domain.model.User
-import tevent.service.UsersService
+import tevent.http.model.UserData
+import tevent.http.model.EventParticipation.eventParticipationEncoder
+import tevent.http.model.OrgParticipation.orgParticipationEncoder
+import tevent.service.{ParticipationService, UsersService}
 import zio._
 import zio.interop.catz.taskConcurrentInstance
 
-final class UsersEndpoint[R <: UsersService] {
-  type UsersTask[A] = RIO[R, A]
+final class UsersEndpoint[R <: UsersService with ParticipationService] {
+  type Task[A] = RIO[R, A]
 
   private val prefixPath = "/users"
-  private val dsl = Http4sDsl[UsersTask]
+  private val dsl = Http4sDsl[Task]
   import dsl._
 
-  case class UserData(name: String, email: String)
-
-  implicit val userEncoder: Encoder[UserData] = deriveEncoder[UserData]
-  implicit val userDecoder: Decoder[UserData] = deriveDecoder[UserData]
-
-  private val httpRoutes = AuthedRoutes.of[User, UsersTask] {
+  private val httpRoutes = AuthedRoutes.of[User, Task] {
     case GET -> Root / LongVar(id) as user =>
       if (user.id == id) Ok(UserData(user.name, user.email)) else Forbidden()
     case request@PUT -> Root / LongVar(id) as user =>
       if (user.id != id) Forbidden() else request.req.decode[UserData] { form =>
         UsersService.update(id, form.name, form.email).foldM(errorMapper, _ => Ok())
       }
+    case GET -> Root / LongVar(id) / "events" as user =>
+      if (user.id != id) Forbidden()
+      else ParticipationService.getEvents(user.id).foldM(errorMapper, Ok(_))
+    case GET -> Root / LongVar(id) / "organizations" as user =>
+      if (user.id != id) Forbidden()
+      else ParticipationService.getOrganizations(user.id).foldM(errorMapper, Ok(_))
   }
 
-  def routes(implicit middleware: AuthMiddleware[UsersTask, User]): HttpRoutes[UsersTask] = Router(
-    prefixPath -> middleware(httpRoutes)
+  def routes(implicit middleware: AuthMiddleware[Task, User]): HttpRoutes[Task] = Router(
+    prefixPath -> httpRoutes
   )
 }

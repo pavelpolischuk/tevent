@@ -1,34 +1,34 @@
 package tevent.http.endpoints
 
-import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
-import io.circe.{Decoder, Encoder}
-import org.http4s.HttpRoutes
 import org.http4s.dsl.Http4sDsl
-import org.http4s.server.Router
-import tevent.domain.model.Organization
-import tevent.service.OrganizationsService
+import org.http4s.server.{AuthMiddleware, Router}
+import org.http4s.{AuthedRoutes, HttpRoutes}
+import tevent.domain.model.User
+import tevent.http.model.OrganizationForm
+import tevent.http.model.OrgParticipation.organizationEncoder
+import tevent.http.model.EventParticipation.eventEncoder
+import tevent.service.{EventsService, OrganizationsService}
 import zio._
 import zio.interop.catz.taskConcurrentInstance
 
-final class OrganizationsEndpoint[R <: OrganizationsService] {
-  type OrganizationsTask[A] = RIO[R, A]
+final class OrganizationsEndpoint[R <: OrganizationsService with EventsService] {
+  type Task[A] = RIO[R, A]
 
   private val prefixPath = "/organizations"
-  private val dsl = Http4sDsl[OrganizationsTask]
+  private val dsl = Http4sDsl[Task]
   import dsl._
 
-  implicit val orgEncoder: Encoder[Organization] = deriveEncoder[Organization]
-  implicit val orgDecoder: Decoder[Organization] = deriveDecoder[Organization]
-
-  private val httpRoutes = HttpRoutes.of[OrganizationsTask] {
-    case GET -> Root / LongVar(id) => RIO.accessM[R].apply(
-      _.get.get(id).foldM(errorMapper[OrganizationsTask],
-        _.map(Ok(_)).getOrElse(NotFound())
-      )
-    )
+  private val httpRoutes = AuthedRoutes.of[User, Task] {
+    case GET -> Root / LongVar(id) as user =>
+      OrganizationsService.get(id).foldM(errorMapper, _.fold(NotFound())(Ok(_)))
+    case GET -> Root / LongVar(id) / "events" as user =>
+      EventsService.getByOrganization(id).foldM(errorMapper, Ok(_))
+    case request@POST -> Root as user => request.req.decode[OrganizationForm] { form =>
+      OrganizationsService.create(user.id, form.name).foldM(errorMapper, Ok(_))
+    }
   }
 
-  val routes: HttpRoutes[OrganizationsTask] = Router(
+  def routes(implicit middleware: AuthMiddleware[Task, User]): HttpRoutes[Task] = Router(
     prefixPath -> httpRoutes
   )
 }

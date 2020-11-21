@@ -2,7 +2,7 @@ package tevent.infrastructure.repository
 
 import slick.dbio.DBIO
 import tevent.domain.RepositoryError
-import tevent.domain.model.Event
+import tevent.domain.model.{Event, EventParticipationType, User}
 import tevent.domain.repository.EventsRepository
 import tevent.infrastructure.repository.tables.{EventParticipantsT, EventParticipantsTable, EventsT, EventsTable}
 import zio._
@@ -18,15 +18,30 @@ object SlickEventsRepository {
     override val getAll: IO[RepositoryError, List[Event]] =
       io(table.all).map(_.toList).refineRepositoryError
 
-    def getByUser(userId: Long): IO[RepositoryError, List[Event]] = ???
+    override def getByOrganization(organizationId: Long): IO[RepositoryError, List[Event]] =
+      io(table.ofOrganization(organizationId)).map(_.toList).refineRepositoryError
 
-    def getByOrganization(organizationId: Long): IO[RepositoryError, List[Event]] = ???
+    override def getByUser(userId: Long): IO[RepositoryError, List[(Event, EventParticipationType)]] =
+      io(participants.forUser(userId)).map(_.toList).refineRepositoryError
 
     override def getById(id: Long): IO[RepositoryError, Option[Event]] =
       io(table.withId(id)).refineRepositoryError
 
     override def update(event: Event): IO[RepositoryError, Unit] =
       io(table.update(event)).unit.refineRepositoryError
+
+
+    override def getUsers(eventId: Long): IO[RepositoryError, List[(User, EventParticipationType)]] =
+      io(participants.getUsersBy(eventId)).map(_.toList).refineRepositoryError
+
+    override def checkUser(userId: Long, eventId: Long): IO[RepositoryError, Option[EventParticipationType]] =
+      io(participants.checkUserIn(userId, eventId)).refineRepositoryError
+
+    override def addUser(userId: Long, eventId: Long, role: EventParticipationType): IO[RepositoryError, Unit] =
+      io(participants.addUserTo(userId, eventId, role)).unit.refineRepositoryError
+
+    override def removeUser(userId: Long, eventId: Long): IO[RepositoryError, Unit] =
+      io(participants.removeUserFrom(userId, eventId)).unit.refineRepositoryError
   }
 
   def live: URLayer[Db with EventsT with EventParticipantsT, EventsRepository] =

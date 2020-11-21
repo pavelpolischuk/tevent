@@ -15,10 +15,10 @@ import zio.interop.catz.taskConcurrentInstance
 import zio.{RIO, ZIO}
 
 final class AuthEndpoint[R <: AuthService with Crypto with Clock] {
-  type AuthTask[A] = RIO[R, A]
+  type Task[A] = RIO[R, A]
 
   private val prefixPath = "/"
-  private val dsl = Http4sDsl[AuthTask]
+  private val dsl = Http4sDsl[Task]
   import dsl._
 
   case class LoginForm(name: Option[String], email: String, secret: String)
@@ -27,11 +27,11 @@ final class AuthEndpoint[R <: AuthService with Crypto with Clock] {
   implicit val loginDecoder: Decoder[LoginForm] = deriveDecoder[LoginForm]
   implicit val loginEncoder: Encoder[LoginData] = deriveEncoder[LoginData]
 
-  def forbidden: AuthedRoutes[DomainError, AuthTask] = {
+  def forbidden: AuthedRoutes[DomainError, Task] = {
     Kleisli(req => OptionT.liftF(Forbidden(req.context.message)))
   }
 
-  def authUser: Kleisli[AuthTask, Request[AuthTask], Either[DomainError, User]] = Kleisli({ request =>
+  def authUser: Kleisli[Task, Request[Task], Either[DomainError, User]] = Kleisli({ request =>
     val value = for {
       header <- ZIO.fromEither(headers.Cookie.from(request.headers).toRight(ValidationError("Cookie parsing error")))
       cookie <- ZIO.fromEither(header.values.toList.find(_.name == "authcookie").toRight(ValidationError("Couldn't find the authcookie")))
@@ -40,7 +40,7 @@ final class AuthEndpoint[R <: AuthService with Crypto with Clock] {
     value.fold(f => Left(f), u => Right(u))
   })
 
-  private val httpRoutes = HttpRoutes.of[AuthTask] {
+  private val httpRoutes = HttpRoutes.of[Task] {
     case request@POST -> Root / "signin" => request.decode[LoginForm] { form =>
       AuthService.signIn(form.name.getOrElse(""), form.email, form.secret).foldM(
         failure = errorMapper,
@@ -55,7 +55,7 @@ final class AuthEndpoint[R <: AuthService with Crypto with Clock] {
     }
   }
 
-  def routes: HttpRoutes[AuthTask] = Router(
+  def routes: HttpRoutes[Task] = Router(
     prefixPath -> httpRoutes
   )
 }

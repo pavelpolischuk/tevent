@@ -1,5 +1,6 @@
 package tevent.infrastructure
 
+import tevent.domain.repository.Repositories
 import tevent.infrastructure.repository.{Db, SlickEventsRepository, SlickOrganizationsRepository, SlickUsersRepository, Tables}
 import tevent.infrastructure.service.Crypto
 import tevent.service._
@@ -14,8 +15,10 @@ object Environments {
 
   private val dbWithTables = Configuration.live >>> Db.fromConfig >+> Tables.live >>> Tables.create
   private val repositories = SlickUsersRepository.live ++ SlickEventsRepository.live ++ SlickOrganizationsRepository.live
-  private val services = UsersService.live ++ EventsService.live ++ OrganizationsService.live
-  private val servicesDone: URLayer[Crypto, Services with Crypto] = ZLayer.identity[Crypto] ++ (dbWithTables >>> repositories >>> services) >+> AuthService.live
+  private val services = ZLayer.identity[Repositories] ++ ParticipationService.live >>>
+    (ZLayer.identity[ParticipationService] ++ EventsService.live ++ OrganizationsService.live ++ UsersService.live)
+  private val servicesDone: URLayer[Crypto, Services with Crypto] =
+    ZLayer.identity[Crypto] ++ (dbWithTables >>> repositories >>> services) >+> AuthService.live
 
   val appEnvironment: ULayer[AppEnvironment] = httpServerEnvironment >+> servicesDone
 }

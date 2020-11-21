@@ -35,6 +35,9 @@ EventsTable(val profile: JdbcProfile, val organizations: OrganizationsTable) {
 
   def withId(id: Long): DBIO[Option[Event]] = All.filter(_.id === id).result.headOption
 
+  def ofOrganization(organizationId: Long): DBIO[Seq[Event]] =
+    All.filter(_.organizationId === organizationId).result
+
   def update(event: Event): DBIO[Int] = {
     val q = for { c <- All if c.id === event.id } yield (c.name, c.datetime, c.location, c.capacity, c.broadcastLink)
     q.update((event.name, event.datetime, event.location, event.capacity, event.videoBroadcastLink))
