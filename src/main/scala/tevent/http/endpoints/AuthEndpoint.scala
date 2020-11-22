@@ -1,13 +1,12 @@
 package tevent.http.endpoints
 
 import cats.data.{Kleisli, OptionT}
-import io.circe.{Decoder, Encoder}
-import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
 import org.http4s._
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.Router
 import tevent.domain.model.User
 import tevent.domain.{DomainError, ValidationError}
+import tevent.http.model.{LoginData, LoginForm}
 import tevent.infrastructure.service.Crypto
 import tevent.service.AuthService
 import zio.clock.Clock
@@ -20,12 +19,6 @@ final class AuthEndpoint[R <: AuthService with Crypto with Clock] {
   private val prefixPath = "/"
   private val dsl = Http4sDsl[Task]
   import dsl._
-
-  case class LoginForm(name: Option[String], email: String, secret: String)
-  case class LoginData(message: String, token: String)
-
-  implicit val loginDecoder: Decoder[LoginForm] = deriveDecoder[LoginForm]
-  implicit val loginEncoder: Encoder[LoginData] = deriveEncoder[LoginData]
 
   def forbidden: AuthedRoutes[DomainError, Task] = {
     Kleisli(req => OptionT.liftF(Forbidden(req.context.message)))

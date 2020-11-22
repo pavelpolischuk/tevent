@@ -1,7 +1,7 @@
 package tevent.http.model
 
-import io.circe.Decoder
-import io.circe.generic.semiauto.deriveDecoder
+import io.circe.{Decoder, Encoder}
+import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
 
 import java.time.ZonedDateTime
 
@@ -14,4 +14,5 @@ case class EventForm(organizationId: Long,
 
 object EventForm {
   implicit val eventFormDecoder: Decoder[EventForm] = deriveDecoder[EventForm]
+  implicit val eventFormEncoder: Encoder[EventForm] = deriveEncoder[EventForm]
 }

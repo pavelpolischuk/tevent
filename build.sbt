@@ -26,6 +26,8 @@ lazy val root = (project in file("."))
       "dev.zio"               %% "zio-interop-cats"    % "2.2.0.1",
       "dev.zio"               %% "zio-logging"         % "0.5.3",
       "org.scalameta"         %% "svm-subs"            % "20.2.0",
+      "org.scalatest"         %% "scalatest"           % "3.2.0" % Test,
+      "org.scalamock"         %% "scalamock"           % "4.4.0" % Test,
       "com.github.pureconfig" %% "pureconfig"          % "0.14.0",
       "com.github.t3hnar"     %% "scala-bcrypt"        % "4.3.0",
       "com.h2database"        %  "h2"                  % "1.4.200"

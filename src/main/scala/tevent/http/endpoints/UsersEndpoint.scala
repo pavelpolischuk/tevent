@@ -5,8 +5,8 @@ import org.http4s.server.{AuthMiddleware, Router}
 import org.http4s.{AuthedRoutes, HttpRoutes}
 import tevent.domain.model.User
 import tevent.http.model.UserData
-import tevent.http.model.EventParticipation.eventParticipationEncoder
-import tevent.http.model.OrgParticipation.orgParticipationEncoder
+import tevent.http.model.EventParticipation.eventParticipationTupleEncoder
+import tevent.http.model.OrgParticipation.orgParticipationTupleEncoder
 import tevent.service.{ParticipationService, UsersService}
 import zio._
 import zio.interop.catz.taskConcurrentInstance
