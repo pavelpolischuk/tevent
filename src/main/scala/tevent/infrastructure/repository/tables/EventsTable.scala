@@ -7,8 +7,7 @@ import slick.lifted.ProvenShape
 import slick.sql.SqlProfile.ColumnOption.Nullable
 import tevent.domain.model.Event
 
-class
-EventsTable(val profile: JdbcProfile, val organizations: OrganizationsTable) {
+class EventsTable(val organizations: OrganizationsTable)(implicit val profile: JdbcProfile) {
   import profile.api._
 
   class Events(tag: Tag) extends Table[Event](tag, "EVENTS") {
@@ -22,7 +21,7 @@ EventsTable(val profile: JdbcProfile, val organizations: OrganizationsTable) {
 
     def organization = foreignKey("ORGANIZATION_FK", organizationId, organizations.All)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
 
-    override def * : ProvenShape[Event] = (id, organizationId, name, datetime, location, capacity, broadcastLink).mapTo[Event]
+    override def * : ProvenShape[Event] = (id, organizationId, name, datetime, location, capacity, broadcastLink).<>(Event.mapperTo, Event.unapply)
   }
 
   val All = TableQuery[Events]

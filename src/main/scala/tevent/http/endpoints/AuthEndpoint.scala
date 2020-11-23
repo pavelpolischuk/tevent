@@ -6,7 +6,7 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.server.Router
 import tevent.domain.model.User
 import tevent.domain.{DomainError, ValidationError}
-import tevent.http.model.{LoginData, LoginForm}
+import tevent.http.model.user.{LoginData, LoginForm}
 import tevent.infrastructure.service.Crypto
 import tevent.service.AuthService
 import zio.clock.Clock

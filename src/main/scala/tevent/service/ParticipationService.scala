@@ -1,41 +1,103 @@
 package tevent.service
 
-import tevent.domain.Named.organizationNamed
-import tevent.domain.model.{Event, EventParticipationType, OrgParticipationType, Organization}
-import tevent.domain.repository.{EventsRepository, OrganizationsRepository}
-import tevent.domain.{AccessError, DomainError, EntityNotFound}
+import tevent.domain.EntityNotFound.optionToIO
+import tevent.domain.Named.{orgParticipationRequestNamed, organizationNamed}
+import tevent.domain.model._
+import tevent.domain.repository.OrganizationsRepository
+import tevent.domain.{AccessError, DomainError, EntityNotFound, ValidationError}
 import zio.{IO, URLayer, ZIO, ZLayer}
 
 object ParticipationService {
   trait Service {
+    def checkUser(userId: Long, organizationId: Long, role: OrgParticipationType): IO[DomainError, Unit]
+
     def getOrganizations(userId: Long): IO[DomainError, List[(Organization, OrgParticipationType)]]
-    def getEvents(userId: Long): IO[DomainError, List[(Event, EventParticipationType)]]
-    def checkUser(userId: Long, organizationId: Long, roles: Set[OrgParticipationType]): IO[DomainError, Unit]
+    def getRequests(userId: Long, organizationId: Long): IO[DomainError, List[(User, OrgParticipationType, User)]]
+    def getOwnRequests(userId: Long): IO[DomainError, List[(Organization, OrgParticipationType, Option[User])]]
+
+    def joinOrganization(participation: OrgParticipation): IO[DomainError, Unit]
+    def inviteIntoOrganization(participation: OrgParticipation, inviterId: Long): IO[DomainError, Unit]
+    def approveRequestIntoOrganization(userId: Long, organizationId: Long, approverId: Long): IO[DomainError, Unit]
+    def leaveOrganization(userId: Long, organizationId: Long): IO[DomainError, Unit]
   }
 
-  class ParticipationServiceImpl(organizations: OrganizationsRepository.Service, events: EventsRepository.Service) extends ParticipationService.Service {
-    override def checkUser(userId: Long, organizationId: Long, roles: Set[OrgParticipationType]): IO[DomainError, Unit] =
+  class ParticipationServiceImpl(organizations: OrganizationsRepository.Service) extends ParticipationService.Service {
+    override def checkUser(userId: Long, organizationId: Long, role: OrgParticipationType): IO[DomainError, Unit] =
       organizations.checkUser(userId, organizationId).flatMap {
         case None => IO.fail(EntityNotFound[Organization, Long](organizationId))
-        case Some(v) if roles.contains(v) => IO.unit
+        case Some(v) if v >= role => IO.unit
         case _ => IO.fail(AccessError)
       }
 
     override def getOrganizations(userId: Long): IO[DomainError, List[(Organization, OrgParticipationType)]] =
       organizations.getByUser(userId)
 
-    override def getEvents(userId: Long): IO[DomainError, List[(Event, EventParticipationType)]] =
-      events.getByUser(userId)
+    override def getRequests(userId: Long, organizationId: Long): IO[DomainError, List[(User, OrgParticipationType, User)]] = for {
+      _ <- checkUser(userId, organizationId, OrgManager)
+      req <- organizations.getRequests(organizationId)
+    } yield req
+
+    override def getOwnRequests(userId: Long): IO[DomainError, List[(Organization, OrgParticipationType, Option[User])]] =
+      organizations.getRequestsForUser(userId).map(_.map(r => (r._1, r._2, Option.when(userId != r._3.id)(r._3))))
+
+
+    override def joinOrganization(participation: OrgParticipation): IO[DomainError, Unit] =
+      if (participation.participationType >= OrgManager)
+        organizations.getRequest(participation.userId, participation.organizationId).flatMap {
+          case Some(approved)
+            if approved.fromUserId != participation.userId && approved.participationType >= participation.participationType =>
+            organizations.addUser(participation).andThen(
+              organizations.removeRequest(approved.userId, approved.organizationId))
+
+          case _ => organizations.addRequest(OrgParticipationRequest(participation))
+        }
+      else organizations.addUser(participation).andThen(
+        organizations.removeRequest(participation.userId, participation.organizationId))
+
+    override def inviteIntoOrganization(participation: OrgParticipation, inviterId: Long): IO[DomainError, Unit] = for {
+      _ <- checkUser(inviterId, participation.organizationId, participation.participationType)
+      _ <- organizations.addRequest(OrgParticipationRequest(participation, inviterId))
+    } yield ()
+
+    override def approveRequestIntoOrganization(userId: Long, organizationId: Long, approverId: Long): IO[DomainError, Unit] = for {
+      request <- organizations.getRequest(userId, organizationId)
+        .flatMap(optionToIO[OrgParticipationRequest, (Long, Long)]((userId, organizationId)))
+        .filterOrFail(_.fromUserId == userId)(ValidationError("Request not from user"))
+      needApproverRole = if (request.participationType >= OrgManager) request.participationType else OrgManager
+      _ <- checkUser(approverId, organizationId, needApproverRole)
+      _ <- organizations.removeRequest(userId, organizationId)
+      _ <- organizations.addUser(request.toParticipation)
+    } yield ()
+
+    override def leaveOrganization(userId: Long, organizationId: Long): IO[DomainError, Unit] =
+      organizations.removeRequest(userId, organizationId).andThen(
+        organizations.removeUser(userId, organizationId)
+      )
   }
 
-  def live: URLayer[OrganizationsRepository with EventsRepository, ParticipationService] =
-    ZLayer.fromServices[OrganizationsRepository.Service, EventsRepository.Service, ParticipationService.Service](
-      new ParticipationServiceImpl(_, _))
+  def live: URLayer[OrganizationsRepository, ParticipationService] =
+    ZLayer.fromService[OrganizationsRepository.Service, ParticipationService.Service](new ParticipationServiceImpl(_))
 
 
   def getOrganizations(userId: Long): ZIO[ParticipationService, DomainError, List[(Organization, OrgParticipationType)]] =
     ZIO.accessM(_.get.getOrganizations(userId))
 
-  def getEvents(userId: Long): ZIO[ParticipationService, DomainError, List[(Event, EventParticipationType)]] =
-    ZIO.accessM(_.get.getEvents(userId))
+  def getRequests(userId: Long, organizationId: Long): ZIO[ParticipationService, DomainError, List[(User, OrgParticipationType, User)]] =
+    ZIO.accessM(_.get.getRequests(userId, organizationId))
+
+  def getOwnRequests(userId: Long): ZIO[ParticipationService, DomainError, List[(Organization, OrgParticipationType, Option[User])]] =
+    ZIO.accessM(_.get.getOwnRequests(userId))
+
+
+  def joinOrganization(participation: OrgParticipation): ZIO[ParticipationService, DomainError, Unit] =
+    ZIO.accessM(_.get.joinOrganization(participation))
+
+  def inviteIntoOrganization(participation: OrgParticipation, inviterId: Long): ZIO[ParticipationService, DomainError, Unit] =
+    ZIO.accessM(_.get.inviteIntoOrganization(participation, inviterId))
+
+  def approveRequestIntoOrganization(userId: Long, organizationId: Long, approverId: Long): ZIO[ParticipationService, DomainError, Unit] =
+    ZIO.accessM(_.get.approveRequestIntoOrganization(userId, organizationId, approverId))
+
+  def leaveOrganization(userId: Long, organizationId: Long): ZIO[ParticipationService, DomainError, Unit] =
+    ZIO.accessM(_.get.leaveOrganization(userId, organizationId))
 }

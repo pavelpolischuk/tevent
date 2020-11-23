@@ -2,7 +2,7 @@ package tevent.infrastructure.repository
 
 import slick.dbio.DBIO
 import tevent.domain.RepositoryError
-import tevent.domain.model.{Event, EventParticipationType, User}
+import tevent.domain.model.{Event, EventParticipation, EventParticipationType, User}
 import tevent.domain.repository.EventsRepository
 import tevent.infrastructure.repository.tables.{EventParticipantsT, EventParticipantsTable, EventsT, EventsTable}
 import zio._
@@ -10,7 +10,7 @@ import zio._
 object SlickEventsRepository {
   def apply(db: Db.Service, table: EventsTable, participants: EventParticipantsTable): EventsRepository.Service = new EventsRepository.Service {
 
-    private def io[R](action: DBIO[R]): Task[R] = ZIO.fromDBIO(action).provide(db)
+    private def io[R](action: DBIO[R]): Task[R] = action.toZIO.provide(db)
 
     override def add(event: Event): IO[RepositoryError, Long] =
       io(table.add(event)).refineRepositoryError
@@ -30,15 +30,14 @@ object SlickEventsRepository {
     override def update(event: Event): IO[RepositoryError, Unit] =
       io(table.update(event)).unit.refineRepositoryError
 
-
     override def getUsers(eventId: Long): IO[RepositoryError, List[(User, EventParticipationType)]] =
       io(participants.getUsersBy(eventId)).map(_.toList).refineRepositoryError
 
     override def checkUser(userId: Long, eventId: Long): IO[RepositoryError, Option[EventParticipationType]] =
       io(participants.checkUserIn(userId, eventId)).refineRepositoryError
 
-    override def addUser(userId: Long, eventId: Long, role: EventParticipationType): IO[RepositoryError, Unit] =
-      io(participants.addUserTo(userId, eventId, role)).unit.refineRepositoryError
+    override def addUser(participation: EventParticipation): IO[RepositoryError, Unit] =
+      io(participants.addUserTo(participation)).unit.refineRepositoryError
 
     override def removeUser(userId: Long, eventId: Long): IO[RepositoryError, Unit] =
       io(participants.removeUserFrom(userId, eventId)).unit.refineRepositoryError

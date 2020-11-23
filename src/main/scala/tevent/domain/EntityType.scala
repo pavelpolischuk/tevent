@@ -17,4 +17,10 @@ object Named {
   implicit val organizationNamed: EntityType[Organization] = new EntityType[Organization] {
     override val name: String = "Organization"
   }
+  implicit val orgParticipationNamed: EntityType[OrgParticipation] = new EntityType[OrgParticipation] {
+    override val name: String = "OrgParticipation"
+  }
+  implicit val orgParticipationRequestNamed: EntityType[OrgParticipationRequest] = new EntityType[OrgParticipationRequest] {
+    override val name: String = "OrgParticipationRequest"
+  }
 }

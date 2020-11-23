@@ -5,7 +5,7 @@ import slick.lifted.ProvenShape
 import tevent.domain.model.User
 
 
-class UsersTable(val profile: JdbcProfile)  {
+class UsersTable(implicit val profile: JdbcProfile)  {
   import profile.api._
 
   class Users(tag: Tag) extends Table[User](tag, "USERS") {

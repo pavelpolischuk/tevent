@@ -1,26 +1,11 @@
 package tevent.infrastructure.repository.tables
 
-import slick.jdbc.{JdbcProfile, JdbcType}
+import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
-import tevent.domain.model.{Event, EventParticipationType, EventSubscriber, OfflineParticipant, OnlineParticipant, User}
+import tevent.domain.model.{Event, EventParticipation, EventParticipationType, User}
 
-class EventParticipantsTable(val profile: JdbcProfile, val users: UsersTable, val events: EventsTable) {
+class EventParticipantsTable(val users: UsersTable, val events: EventsTable)(implicit val profile: JdbcProfile) {
   import profile.api._
-
-  implicit val eventParticipationColumnType: JdbcType[EventParticipationType] = MappedColumnType.base[EventParticipationType, Int](
-    {
-      case EventSubscriber => 0
-      case OnlineParticipant => 1
-      case OfflineParticipant => 2
-    },
-    {
-      case 0 => EventSubscriber
-      case 1 => OnlineParticipant
-      case 2 => OfflineParticipant
-    }
-  )
-
-  case class EventParticipation(userId: Long, eventId: Long, participationType: EventParticipationType)
 
   class EventParticipantsTable(tag: Tag) extends Table[EventParticipation](tag, "EVENT_PARTICIPANTS") {
     def userId: Rep[Long] = column("USER_ID")
@@ -49,11 +34,13 @@ class EventParticipantsTable(val profile: JdbcProfile, val users: UsersTable, va
   def checkUserIn(userId: Long, eventId: Long): DBIO[Option[EventParticipationType]] =
     All.filter(p => p.userId === userId && p.eventId === eventId).map(_.participationType).result.headOption
 
-  def addUserTo(userId: Long, eventId: Long, role: EventParticipationType): DBIO[Int] =
-    All += EventParticipation(userId, eventId, role)
+  def addUserTo(participation: EventParticipation): DBIO[Int] =
+    All += participation
 
-  def updateUserTo(userId: Long, eventId: Long, role: EventParticipationType): DBIO[Int] =
-    All.filter(p => p.userId === userId && p.eventId === eventId).map(_.participationType).update(role)
+  def update(participation: EventParticipation): DBIO[Int] =
+    All.filter(p => p.userId === participation.userId && p.eventId === participation.eventId)
+      .map(_.participationType)
+      .update(participation.participationType)
 
   def removeUserFrom(userId: Long, eventId: Long): DBIO[Int] =
     All.filter(p => p.userId === userId && p.eventId === eventId).delete

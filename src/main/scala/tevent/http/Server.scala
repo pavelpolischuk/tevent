@@ -9,7 +9,7 @@ import org.http4s.server.middleware.{AutoSlash, GZip}
 import org.http4s.server.{AuthMiddleware, Router}
 import org.http4s.{HttpRoutes, Request, Response}
 import tevent.domain.model.User
-import tevent.http.endpoints.{AuthEndpoint, EventsEndpoint, HealthEndpoint, OrganizationsEndpoint, UsersEndpoint}
+import tevent.http.endpoints.{AuthEndpoint, EventsEndpoint, HealthEndpoint, OrganizationsEndpoint, UserEndpoint}
 import tevent.infrastructure.Configuration
 import tevent.infrastructure.Environments.AppEnvironment
 import zio.interop.catz._
@@ -38,7 +38,7 @@ object Server {
 
     implicit val auth: AuthMiddleware[ServerRIO, User] = AuthMiddleware(authEndpoint.authUser, authEndpoint.forbidden)
 
-    val usersRoutes = new UsersEndpoint[AppEnvironment].routes
+    val usersRoutes = new UserEndpoint[AppEnvironment].routes
     val eventsRoutes = new EventsEndpoint[AppEnvironment].routes
     val organizationsRoutes = new OrganizationsEndpoint[AppEnvironment].routes
     val healthRoutes = new HealthEndpoint[AppEnvironment].routes

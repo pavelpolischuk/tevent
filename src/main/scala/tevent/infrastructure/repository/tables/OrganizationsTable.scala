@@ -4,14 +4,14 @@ import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
 import tevent.domain.model.Organization
 
-class OrganizationsTable(val profile: JdbcProfile) {
+class OrganizationsTable(implicit val profile: JdbcProfile) {
   import profile.api._
 
   class Organizations(tag: Tag) extends Table[Organization](tag, "ORGANIZATIONS") {
     def id: Rep[Long] = column("ID", O.PrimaryKey, O.AutoInc)
     def name: Rep[String] = column("NAME")
 
-    override def * : ProvenShape[Organization] = (id, name).mapTo[Organization]
+    override def * : ProvenShape[Organization] = (id, name).<>(Organization.mapperTo, Organization.unapply)
   }
 
   val All = TableQuery[Organizations]

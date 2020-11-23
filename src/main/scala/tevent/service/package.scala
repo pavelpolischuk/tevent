@@ -8,5 +8,5 @@ package object service {
   type EventsService = Has[EventsService.Service]
   type OrganizationsService = Has[OrganizationsService.Service]
   type ParticipationService = Has[ParticipationService.Service]
-  type Services = AuthService with UsersService with EventsService with OrganizationsService with ParticipationService
+  type Services = ParticipationService with EventsService with OrganizationsService with UsersService with AuthService
 }

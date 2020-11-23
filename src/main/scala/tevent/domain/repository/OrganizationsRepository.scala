@@ -1,7 +1,7 @@
 package tevent.domain.repository
 
 import tevent.domain.RepositoryError
-import tevent.domain.model.{OrgParticipationType, Organization, User}
+import tevent.domain.model.{OrgParticipation, OrgParticipationRequest, OrgParticipationType, Organization, User}
 import zio.IO
 
 object OrganizationsRepository {
@@ -14,7 +14,15 @@ object OrganizationsRepository {
 
     def getUsers(organizationId: Long): IO[RepositoryError, List[(User, OrgParticipationType)]]
     def checkUser(userId: Long, organizationId: Long): IO[RepositoryError, Option[OrgParticipationType]]
-    def addUser(userId: Long, organizationId: Long, role: OrgParticipationType): IO[RepositoryError, Unit]
+    def addUser(participation: OrgParticipation): IO[RepositoryError, Unit]
+    def updateUser(participation: OrgParticipation): IO[RepositoryError, Unit]
     def removeUser(userId: Long, organizationId: Long): IO[RepositoryError, Unit]
+
+    def getRequest(userId: Long, organizationId: Long): IO[RepositoryError, Option[OrgParticipationRequest]]
+    def getRequests(organizationId: Long): IO[RepositoryError, List[(User, OrgParticipationType, User)]]
+    def getRequestsForUser(userId: Long): IO[RepositoryError, List[(Organization, OrgParticipationType, User)]]
+    def addRequest(request: OrgParticipationRequest): IO[RepositoryError, Unit]
+    def removeRequest(userId: Long, organizationId: Long): IO[RepositoryError, Unit]
+    def updateRequest(request: OrgParticipationRequest): IO[RepositoryError, Unit]
   }
 }

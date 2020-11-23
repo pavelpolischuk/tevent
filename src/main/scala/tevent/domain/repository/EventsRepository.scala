@@ -1,7 +1,7 @@
 package tevent.domain.repository
 
 import tevent.domain.RepositoryError
-import tevent.domain.model.{Event, EventParticipationType, User}
+import tevent.domain.model.{Event, EventParticipation, EventParticipationType, User}
 import zio.IO
 
 object EventsRepository {
@@ -15,7 +15,7 @@ object EventsRepository {
 
     def getUsers(organizationId: Long): IO[RepositoryError, List[(User, EventParticipationType)]]
     def checkUser(userId: Long, organizationId: Long): IO[RepositoryError, Option[EventParticipationType]]
-    def addUser(userId: Long, organizationId: Long, role: EventParticipationType): IO[RepositoryError, Unit]
+    def addUser(participation: EventParticipation): IO[RepositoryError, Unit]
     def removeUser(userId: Long, organizationId: Long): IO[RepositoryError, Unit]
   }
 }

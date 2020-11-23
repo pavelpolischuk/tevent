@@ -17,8 +17,8 @@ object Environments {
   private val repositories = SlickUsersRepository.live ++ SlickEventsRepository.live ++ SlickOrganizationsRepository.live
   private val services = ZLayer.identity[Repositories] ++ ParticipationService.live >>>
     (ZLayer.identity[ParticipationService] ++ EventsService.live ++ OrganizationsService.live ++ UsersService.live)
-  private val servicesDone: URLayer[Crypto, Services with Crypto] =
-    ZLayer.identity[Crypto] ++ (dbWithTables >>> repositories >>> services) >+> AuthService.live
+  private val servicesDone: URLayer[Crypto, Crypto with Services] =
+    ZLayer.identity[Crypto] >+> (dbWithTables >>> repositories >>> services) >+> AuthService.live
 
   val appEnvironment: ULayer[AppEnvironment] = httpServerEnvironment >+> servicesDone
 }

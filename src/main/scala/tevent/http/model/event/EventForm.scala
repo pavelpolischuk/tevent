@@ -1,7 +1,7 @@
-package tevent.http.model
+package tevent.http.model.event
 
-import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
+import io.circe.{Decoder, Encoder}
 
 import java.time.ZonedDateTime
 

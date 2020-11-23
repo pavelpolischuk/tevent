@@ -10,7 +10,7 @@ import zio.{IO, Task, URLayer, ZIO, ZLayer}
 object SlickUsersRepository {
   def apply(db: Db.Service, table: UsersTable): UsersRepository.Service = new UsersRepository.Service {
 
-    private def io[R](action: DBIO[R]): Task[R] = ZIO.fromDBIO(action).provide(db)
+    private def io[R](action: DBIO[R]): Task[R] = action.toZIO.provide(db)
 
     override def add(user: User): IO[RepositoryError, Long] =
       io(table.add(user)).refineRepositoryError
