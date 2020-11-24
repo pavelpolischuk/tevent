@@ -11,7 +11,7 @@ case class EntityNotFound[A: EntityType, B](info: B)(implicit named: EntityType[
 }
 
 object EntityNotFound {
-  def optionToIO[A: EntityType, B](info: B): Option[A] => IO[DomainError, A] = {
+  def noneToNotFound[A: EntityType, B](info: B): Option[A] => IO[DomainError, A] = {
     case None => ZIO.fail(EntityNotFound[A, B](info))
     case Some(v) => ZIO.succeed(v)
   }

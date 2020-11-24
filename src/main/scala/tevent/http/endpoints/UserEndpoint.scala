@@ -4,6 +4,7 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.server.{AuthMiddleware, Router}
 import org.http4s.{AuthedRoutes, HttpRoutes}
 import tevent.domain.model.User
+import tevent.http.model.event.EventParticipationData
 import tevent.http.model.organization.{OrgParticipationData, OwnOrgParticipationRequest}
 import tevent.http.model.user.UserData
 import tevent.service.{EventsService, ParticipationService, UsersService}
@@ -23,10 +24,11 @@ final class UserEndpoint[R <: UsersService with ParticipationService with Events
       UsersService.update(user.id, form.name, form.email).foldM(errorMapper, _ => Ok())
     }
     case GET -> Root / "events" as user =>
-      EventsService.getByUser(user.id).foldM(errorMapper, Ok(_))
+      EventsService.getByUser(user.id).foldM(errorMapper,
+        p => Ok(p.map(EventParticipationData.mapperTo)))
     case GET -> Root / "organizations" as user =>
       ParticipationService.getOrganizations(user.id).foldM(errorMapper,
-        r => Ok(r.map(OrgParticipationData.mapperTo)))
+        p => Ok(p.map(OrgParticipationData.mapperTo)))
     case GET -> Root / "requests" as user =>
       ParticipationService.getOwnRequests(user.id).foldM(errorMapper,
         r => Ok(r.map(OwnOrgParticipationRequest.mapperTo)))

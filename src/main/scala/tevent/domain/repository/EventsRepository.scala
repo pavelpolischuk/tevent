@@ -13,9 +13,10 @@ object EventsRepository {
     def getById(id: Long): IO[RepositoryError, Option[Event]]
     def update(event: Event): IO[RepositoryError, Unit]
 
-    def getUsers(organizationId: Long): IO[RepositoryError, List[(User, EventParticipationType)]]
-    def checkUser(userId: Long, organizationId: Long): IO[RepositoryError, Option[EventParticipationType]]
+    def getUsers(eventId: Long): IO[RepositoryError, List[(User, EventParticipationType)]]
+    def checkUser(userId: Long, eventId: Long): IO[RepositoryError, Option[EventParticipationType]]
     def addUser(participation: EventParticipation): IO[RepositoryError, Unit]
-    def removeUser(userId: Long, organizationId: Long): IO[RepositoryError, Unit]
+    def updateUser(participation: EventParticipation): IO[RepositoryError, Unit]
+    def removeUser(userId: Long, eventId: Long): IO[RepositoryError, Unit]
   }
 }

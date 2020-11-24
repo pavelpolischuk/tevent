@@ -1,10 +1,10 @@
 package tevent
 
-import tevent.domain.model.{Event, OrgManager, OrgOwner, OrgSubscriber, Organization, User}
-import tevent.http.model.event.EventForm
-import tevent.http.model.organization.{OrgParticipationApprove, OrgParticipationData, OrgParticipationForm, OrgParticipationRequest, OrganizationForm}
+import tevent.domain.model.{Event, EventSubscriber, OfflineParticipant, OrgManager, OrgOwner, OrgSubscriber, Organization, User}
+import tevent.http.model.event.{EventForm, EventParticipationData, EventParticipationForm, EventUserParticipationData}
+import tevent.http.model.organization.{OrgParticipationApprove, OrgParticipationData, OrgParticipationForm, OrgParticipationRequest, OrgUserParticipationData, OrganizationForm}
 import tevent.http.model.user.{LoginData, LoginForm, UserData, UserId}
-import zio.test.Assertion.{equalTo, isEmpty}
+import zio.test.Assertion.{equalTo, hasSameElements, isEmpty, isTrue}
 import zio.test.TestAspect.sequential
 import zio.test._
 import zio.test.environment.TestEnvironment
@@ -27,12 +27,21 @@ object TEventIntegrationTest extends DefaultRunnableSpec {
   private val organization = Organization(1, "Paul Corp.")
   private val organizationForm = OrganizationForm(organization.name)
 
+  private val ownerParticipation = OrgUserParticipationData(userId, OrgOwner)
   private val memberRequestForm = OrgParticipationForm(OrgManager)
   private val memberRequest = OrgParticipationRequest(user2Id, memberRequestForm.participationType, None)
   private val memberApprove = OrgParticipationApprove(user2.id)
+  private val memberParticipation = OrgUserParticipationData(user2Id, memberRequestForm.participationType)
 
-  private val event = Event(1, organization.id, "Paul Meetup #1", ZonedDateTime.now(), Some("Moscow"), Some(128), None)
+  private val event = Event(1, organization.id, "Paul Meetup #1", ZonedDateTime.now(), Some("Moscow"), Some(1), None)
   private val eventForm = EventForm(event.id, event.name, event.datetime, event.location, event.capacity, event.videoBroadcastLink)
+
+  private val offlineJoin = EventParticipationForm(OfflineParticipant)
+  private val offlineParticipation = EventParticipationData(event, offlineJoin.participationType)
+  private val offlineUser = EventUserParticipationData(userId, offlineJoin.participationType)
+  private val subscribeJoin = EventParticipationForm(EventSubscriber)
+  private val subscribedParticipation = EventParticipationData(event, subscribeJoin.participationType)
+  private val subscribedUser = EventUserParticipationData(user2Id, subscribeJoin.participationType)
 
   def spec: ZSpec[TestEnvironment, Any] = suite("A started Main")(
 
@@ -73,12 +82,10 @@ object TEventIntegrationTest extends DefaultRunnableSpec {
       }
     },
 
-    testM("can join & request & approve members in organization") {
+    testM("can join & leave organization") {
       for {
         response <- HttpClient.post[LoginForm, LoginData]("http://localhost:8080/api/v1/signin", user2Login)
         token2 = response.token
-        response <- HttpClient.post[LoginForm, LoginData]("http://localhost:8080/api/v1/login", userLogin)
-        token = response.token
 
         _ <- HttpClient.post[OrgParticipationForm, Unit]("http://localhost:8080/api/v1/organizations/1/join", token2, OrgParticipationForm(OrgSubscriber))
         forUser <- HttpClient.get[List[OrgParticipationData]]("http://localhost:8080/api/v1/user/organizations", token2)
@@ -87,7 +94,17 @@ object TEventIntegrationTest extends DefaultRunnableSpec {
 
         _ <- HttpClient.post[String, Unit]("http://localhost:8080/api/v1/organizations/1/leave", token2, "")
         forUser <- HttpClient.get[List[OrgParticipationData]]("http://localhost:8080/api/v1/user/organizations", token2)
-        _ = assert(forUser)(equalTo(List.empty))
+      } yield {
+        assert(forUser)(equalTo(List.empty))
+      }
+    },
+
+    testM("can request & approve members in organization") {
+      for {
+        response <- HttpClient.post[LoginForm, LoginData]("http://localhost:8080/api/v1/login", user2Login)
+        token2 = response.token
+        response <- HttpClient.post[LoginForm, LoginData]("http://localhost:8080/api/v1/login", userLogin)
+        token = response.token
 
         _ <- HttpClient.post[OrgParticipationForm, Unit]("http://localhost:8080/api/v1/organizations/1/join", token2, memberRequestForm)
         requests <- HttpClient.get[List[OrgParticipationRequest]]("http://localhost:8080/api/v1/organizations/1/requests", token)
@@ -95,11 +112,13 @@ object TEventIntegrationTest extends DefaultRunnableSpec {
 
         _ <- HttpClient.post[OrgParticipationApprove, Unit]("http://localhost:8080/api/v1/organizations/1/approve", token, memberApprove)
         requests <- HttpClient.get[List[OrgParticipationRequest]]("http://localhost:8080/api/v1/organizations/1/requests", token)
-        forUser <- HttpClient.get[List[OrgParticipationData]]("http://localhost:8080/api/v1/user/organizations", token2)
+        forUser2 <- HttpClient.get[List[OrgParticipationData]]("http://localhost:8080/api/v1/user/organizations", token2)
+        users <- HttpClient.get[List[OrgUserParticipationData]]("http://localhost:8080/api/v1/organizations/1/users", token)
         participation = OrgParticipationData(organization, memberRequest.participationType)
       } yield {
         assert(requests)(isEmpty)
-        assert(forUser)(equalTo(List(participation)))
+        assert(forUser2)(equalTo(List(participation)))
+        assert(users)(hasSameElements(Seq(ownerParticipation, memberParticipation)))
       }
     },
 
@@ -112,8 +131,40 @@ object TEventIntegrationTest extends DefaultRunnableSpec {
         _ = assert(added)(equalTo(event))
 
         gotten <- HttpClient.get[Event]("http://localhost:8080/api/v1/events/1", token)
+        forOrganization <- HttpClient.get[List[Event]]("http://localhost:8080/api/v1/organizations/1/events", token)
       } yield {
         assert(gotten)(equalTo(event))
+        assert(forOrganization)(equalTo(List(event)))
+      }
+    },
+
+    testM("can join & get event") {
+      for {
+        response <- HttpClient.post[LoginForm, LoginData]("http://localhost:8080/api/v1/login", userLogin)
+        token = response.token
+        response <- HttpClient.post[LoginForm, LoginData]("http://localhost:8080/api/v1/login", user2Login)
+        token2 = response.token
+
+        _ <- HttpClient.post[EventParticipationForm, Unit]("http://localhost:8080/api/v1/events/1/join", token, offlineJoin)
+        forUser <- HttpClient.get[List[EventParticipationData]]("http://localhost:8080/api/v1/user/events", token)
+        _ = assert(forUser)(equalTo(List(offlineParticipation)))
+
+        _ <- HttpClient.post[EventParticipationForm, Unit]("http://localhost:8080/api/v1/events/1/join", token2, subscribeJoin)
+        forUser <- HttpClient.get[List[EventParticipationData]]("http://localhost:8080/api/v1/user/events", token2)
+        _ = assert(forUser)(equalTo(List(subscribedParticipation)))
+
+        users <- HttpClient.get[List[EventUserParticipationData]]("http://localhost:8080/api/v1/events/1/users", token)
+        _ = assert(users)(hasSameElements(Seq(offlineUser, subscribedUser)))
+
+        badRequest <- HttpClient.post[EventParticipationForm, Unit]("http://localhost:8080/api/v1/events/1/join", token2, offlineJoin).isFailure
+        _ = assert(badRequest)(isTrue)
+
+        _ <- HttpClient.post[String, Unit]("http://localhost:8080/api/v1/events/1/leave", token2, "")
+        users <- HttpClient.get[List[EventUserParticipationData]]("http://localhost:8080/api/v1/events/1/users", token)
+        forUser <- HttpClient.get[List[EventParticipationData]]("http://localhost:8080/api/v1/user/events", token2)
+      } yield {
+        assert(users)(equalTo(List(offlineUser)))
+        assert(forUser)(isEmpty)
       }
     },
 

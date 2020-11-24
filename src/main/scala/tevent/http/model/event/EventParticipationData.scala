@@ -10,8 +10,6 @@ object EventParticipationData {
   implicit val eventParticipationEncoder: Encoder[EventParticipationData] = deriveEncoder[EventParticipationData]
   implicit val eventParticipationDecoder: Decoder[EventParticipationData] = deriveDecoder[EventParticipationData]
 
-  implicit val eventParticipationTupleEncoder: Encoder[(Event, EventParticipationType)] =
-    eventParticipationEncoder.contramap(p => EventParticipationData(p._1, p._2))
-  implicit val eventParticipationTupleDecoder: Decoder[(Event, EventParticipationType)] =
-    eventParticipationDecoder.map(p => (p.event, p.participation))
+  def mapperTo(tuple: (Event, EventParticipationType)): EventParticipationData =
+    EventParticipationData(tuple._1, tuple._2)
 }

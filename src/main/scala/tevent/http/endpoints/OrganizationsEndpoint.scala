@@ -24,6 +24,9 @@ final class OrganizationsEndpoint[R <: OrganizationsService with EventsService w
     case GET -> Root / LongVar(id) / "requests" as user =>
       ParticipationService.getRequests(user.id, id).foldM(errorMapper,
         r => Ok(r.map(OrgParticipationRequest.mapperTo)))
+    case GET -> Root / LongVar(id) / "users" as user =>
+      ParticipationService.getUsers(user.id, id).foldM(errorMapper,
+        r => Ok(r.map(OrgUserParticipationData.mapperTo)))
 
     case request@POST -> Root as user => request.req.decode[OrganizationForm] { form =>
       OrganizationsService.create(user.id, form.name).foldM(errorMapper, Ok(_))

@@ -10,6 +10,6 @@ object OrgParticipationData {
   implicit val orgParticipationEncoder: Encoder[OrgParticipationData] = deriveEncoder[OrgParticipationData]
   implicit val orgParticipationDecoder: Decoder[OrgParticipationData] = deriveDecoder[OrgParticipationData]
 
-  def mapperTo(tuple: (Organization, OrgParticipationType)): OrgParticipationData
-    = OrgParticipationData(tuple._1, tuple._2)
+  def mapperTo(tuple: (Organization, OrgParticipationType)): OrgParticipationData =
+    OrgParticipationData(tuple._1, tuple._2)
 }

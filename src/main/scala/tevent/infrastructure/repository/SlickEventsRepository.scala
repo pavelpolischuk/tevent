@@ -39,6 +39,9 @@ object SlickEventsRepository {
     override def addUser(participation: EventParticipation): IO[RepositoryError, Unit] =
       io(participants.addUserTo(participation)).unit.refineRepositoryError
 
+    override def updateUser(participation: EventParticipation): IO[RepositoryError, Unit] =
+      io(participants.update(participation)).unit.refineRepositoryError
+
     override def removeUser(userId: Long, eventId: Long): IO[RepositoryError, Unit] =
       io(participants.removeUserFrom(userId, eventId)).unit.refineRepositoryError
   }

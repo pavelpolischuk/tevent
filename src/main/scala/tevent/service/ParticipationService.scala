@@ -1,6 +1,6 @@
 package tevent.service
 
-import tevent.domain.EntityNotFound.optionToIO
+import tevent.domain.EntityNotFound.noneToNotFound
 import tevent.domain.Named.{orgParticipationRequestNamed, organizationNamed}
 import tevent.domain.model._
 import tevent.domain.repository.OrganizationsRepository
@@ -10,6 +10,7 @@ import zio.{IO, URLayer, ZIO, ZLayer}
 object ParticipationService {
   trait Service {
     def checkUser(userId: Long, organizationId: Long, role: OrgParticipationType): IO[DomainError, Unit]
+    def getUsers(userId: Long, organizationId: Long): IO[DomainError, List[(User, OrgParticipationType)]]
 
     def getOrganizations(userId: Long): IO[DomainError, List[(Organization, OrgParticipationType)]]
     def getRequests(userId: Long, organizationId: Long): IO[DomainError, List[(User, OrgParticipationType, User)]]
@@ -28,6 +29,11 @@ object ParticipationService {
         case Some(v) if v >= role => IO.unit
         case _ => IO.fail(AccessError)
       }
+
+    override def getUsers(userId: Long, organizationId: Long): IO[DomainError, List[(User, OrgParticipationType)]] = for {
+      _ <- checkUser(userId, organizationId, OrgMember)
+      req <- organizations.getUsers(organizationId)
+    } yield req
 
     override def getOrganizations(userId: Long): IO[DomainError, List[(Organization, OrgParticipationType)]] =
       organizations.getByUser(userId)
@@ -61,7 +67,7 @@ object ParticipationService {
 
     override def approveRequestIntoOrganization(userId: Long, organizationId: Long, approverId: Long): IO[DomainError, Unit] = for {
       request <- organizations.getRequest(userId, organizationId)
-        .flatMap(optionToIO[OrgParticipationRequest, (Long, Long)]((userId, organizationId)))
+        .flatMap(noneToNotFound((userId, organizationId)))
         .filterOrFail(_.fromUserId == userId)(ValidationError("Request not from user"))
       needApproverRole = if (request.participationType >= OrgManager) request.participationType else OrgManager
       _ <- checkUser(approverId, organizationId, needApproverRole)
@@ -78,6 +84,9 @@ object ParticipationService {
   def live: URLayer[OrganizationsRepository, ParticipationService] =
     ZLayer.fromService[OrganizationsRepository.Service, ParticipationService.Service](new ParticipationServiceImpl(_))
 
+
+  def getUsers(userId: Long, organizationId: Long): ZIO[ParticipationService, DomainError, List[(User, OrgParticipationType)]] =
+    ZIO.accessM(_.get.getUsers(userId, organizationId))
 
   def getOrganizations(userId: Long): ZIO[ParticipationService, DomainError, List[(Organization, OrgParticipationType)]] =
     ZIO.accessM(_.get.getOrganizations(userId))

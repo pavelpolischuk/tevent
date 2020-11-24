@@ -3,8 +3,8 @@ package tevent.http.endpoints
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.{AuthMiddleware, Router}
 import org.http4s.{AuthedRoutes, HttpRoutes}
-import tevent.domain.model.User
-import tevent.http.model.event.EventForm
+import tevent.domain.model.{EventParticipation, User}
+import tevent.http.model.event.{EventForm, EventParticipationForm, EventUserParticipationData}
 import tevent.service.EventsService
 import zio._
 import zio.interop.catz.taskConcurrentInstance
@@ -23,6 +23,16 @@ final class EventsEndpoint[R <: EventsService] {
       EventsService.create(user.id, form.organizationId, form.name, form.datetime, form.location, form.capacity, form.videoBroadcastLink)
         .foldM(errorMapper, Ok(_))
     }
+    case GET -> Root / LongVar(id) / "users" as user =>
+      EventsService.getUsers(user.id, id).foldM(errorMapper,
+        r => Ok(r.map(EventUserParticipationData.mapperTo)))
+
+    case request@POST -> Root / LongVar(id) / "join" as user => request.req.decode[EventParticipationForm] { form =>
+      val r = EventParticipation(user.id, id, form.participationType)
+      EventsService.joinEvent(r).foldM(errorMapper, Ok(_))
+    }
+    case POST -> Root / LongVar(id) / "leave" as user =>
+      EventsService.leaveEvent(user.id, id).foldM(errorMapper, Ok(_))
   }
 
   def routes(implicit middleware: AuthMiddleware[Task, User]): HttpRoutes[Task] = Router(

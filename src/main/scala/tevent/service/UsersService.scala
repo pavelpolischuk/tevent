@@ -1,9 +1,10 @@
 package tevent.service
 
+import tevent.domain.EntityNotFound.noneToNotFound
 import tevent.domain.Named.userNamed
 import tevent.domain.model.User
 import tevent.domain.repository.UsersRepository
-import tevent.domain.{DomainError, EntityNotFound, ValidationError}
+import tevent.domain.{DomainError, ValidationError}
 import zio.{IO, URLayer, ZIO, ZLayer}
 
 object UsersService {
@@ -17,10 +18,10 @@ object UsersService {
   class UsersServiceImpl(repository: UsersRepository.Service) extends UsersService.Service {
 
     override def get(id: Long): IO[DomainError, User] =
-      repository.getById(id).flatMap(EntityNotFound.optionToIO(id))
+      repository.getById(id).flatMap(noneToNotFound(id))
 
     override def findWithEmail(email: String): IO[DomainError, User] =
-      repository.findWithEmail(email).flatMap(EntityNotFound.optionToIO(email))
+      repository.findWithEmail(email).flatMap(noneToNotFound(email))
 
     override def createUser(name: String, email: String, secret: String): IO[DomainError, User] = {
       repository.findWithEmail(email).flatMap {
