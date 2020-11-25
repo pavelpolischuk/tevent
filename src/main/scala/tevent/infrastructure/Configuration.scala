@@ -14,6 +14,11 @@ object Configuration {
   val live: ULayer[Config] = ZLayer.fromEffectMany(
     ZIO
       .effect(ConfigSource.default.loadOrThrow[AppConfig])
+      .map(c =>
+        sys.env.get("PORT").flatMap(_.toIntOption)
+          .map(port => c.copy(httpServer = c.httpServer.copy(port = port)))
+          .getOrElse(c)
+      )
       .map(c => Has(c.database) ++ Has(c.httpServer))
       .orDie
   )
