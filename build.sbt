@@ -5,6 +5,8 @@ val LogbackVersion = "1.2.3"
 val SlickVersion = "3.3.3"
 val ZioVersion = "1.0.3"
 
+enablePlugins(JavaServerAppPackaging)
+
 lazy val root = (project in file("."))
   .settings(
     name := "tevent",
