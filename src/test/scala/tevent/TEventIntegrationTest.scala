@@ -102,7 +102,7 @@ object TEventIntegrationTest extends DefaultRunnableSpec {
         added <- HttpClient.post[EventForm, Event]("http://localhost:8080/api/v1/events", token, eventForm)
 
         gotten <- HttpClient.get[Event]("http://localhost:8080/api/v1/events/1", token)
-        forOrganization <- HttpClient.get[List[Event]]("http://localhost:8080/api/v1/organizations/1/events", token)
+        forOrganization <- HttpClient.get[List[Event]]("http://localhost:8080/api/v1/events?organization=1", token)
       } yield {
         assert(added)(equalTo(event)) &&
         assert(gotten)(equalTo(event)) &&

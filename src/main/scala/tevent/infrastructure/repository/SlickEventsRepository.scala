@@ -2,7 +2,7 @@ package tevent.infrastructure.repository
 
 import slick.dbio.DBIO
 import tevent.domain.RepositoryError
-import tevent.domain.model.{Event, EventParticipation, EventParticipationType, User}
+import tevent.domain.model.{Event, EventFilter, EventParticipation, EventParticipationType, User}
 import tevent.domain.repository.EventsRepository
 import tevent.infrastructure.repository.tables.{EventParticipantsT, EventParticipantsTable, EventsT, EventsTable}
 import zio._
@@ -15,11 +15,8 @@ object SlickEventsRepository {
     override def add(event: Event): IO[RepositoryError, Long] =
       io(table.add(event)).refineRepositoryError
 
-    override val getAll: IO[RepositoryError, List[Event]] =
-      io(table.all).map(_.toList).refineRepositoryError
-
-    override def getByOrganization(organizationId: Long): IO[RepositoryError, List[Event]] =
-      io(table.ofOrganization(organizationId)).map(_.toList).refineRepositoryError
+    override def search(eventFilter: EventFilter): IO[RepositoryError, List[Event]] =
+      io(table.where(eventFilter)).map(_.toList).refineRepositoryError
 
     override def getByUser(userId: Long): IO[RepositoryError, List[(Event, EventParticipationType)]] =
       io(participants.forUser(userId)).map(_.toList).refineRepositoryError

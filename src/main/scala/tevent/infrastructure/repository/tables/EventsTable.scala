@@ -1,11 +1,10 @@
 package tevent.infrastructure.repository.tables
 
 import java.time.ZonedDateTime
-
 import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
 import slick.sql.SqlProfile.ColumnOption.Nullable
-import tevent.domain.model.Event
+import tevent.domain.model.{Event, EventFilter}
 
 class EventsTable(val organizations: OrganizationsTable)(implicit val profile: JdbcProfile) {
   import profile.api._
@@ -34,8 +33,12 @@ class EventsTable(val organizations: OrganizationsTable)(implicit val profile: J
 
   def withId(id: Long): DBIO[Option[Event]] = All.filter(_.id === id).result.headOption
 
-  def ofOrganization(organizationId: Long): DBIO[Seq[Event]] =
-    All.filter(_.organizationId === organizationId).result
+  def where(eventFilter: EventFilter): DBIO[Seq[Event]] = All
+      .filterOpt(eventFilter.organizationId)(_.organizationId === _)
+      .filterOpt(eventFilter.fromDate)(_.datetime >= _)
+      .filterOpt(eventFilter.toDate)(_.datetime <= _)
+      .filterOpt(eventFilter.location)(_.location === _)
+      .result
 
   def update(event: Event): DBIO[Int] = {
     val q = for { c <- All if c.id === event.id } yield (c.name, c.datetime, c.location, c.capacity, c.broadcastLink)

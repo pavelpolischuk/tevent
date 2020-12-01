@@ -5,11 +5,11 @@ import org.http4s.server.{AuthMiddleware, Router}
 import org.http4s.{AuthedRoutes, HttpRoutes}
 import tevent.domain.model.{OrgParticipation, User}
 import tevent.http.model.organization._
-import tevent.service.{EventsService, OrganizationsService, ParticipationService}
+import tevent.service.{OrganizationsService, ParticipationService}
 import zio._
 import zio.interop.catz.taskConcurrentInstance
 
-final class OrganizationsEndpoint[R <: OrganizationsService with EventsService with ParticipationService] {
+final class OrganizationsEndpoint[R <: OrganizationsService with ParticipationService] {
   type Task[A] = RIO[R, A]
 
   private val prefixPath = "/organizations"
@@ -19,8 +19,6 @@ final class OrganizationsEndpoint[R <: OrganizationsService with EventsService w
   private val httpRoutes = AuthedRoutes.of[User, Task] {
     case GET -> Root / LongVar(id) as user =>
       OrganizationsService.get(id).foldM(errorMapper, _.fold(NotFound())(Ok(_)))
-    case GET -> Root / LongVar(id) / "events" as user =>
-      EventsService.getByOrganization(id).foldM(errorMapper, Ok(_))
     case GET -> Root / LongVar(id) / "requests" as user =>
       ParticipationService.getRequests(user.id, id).foldM(errorMapper,
         r => Ok(r.map(OrgParticipationRequest.mapperTo)))

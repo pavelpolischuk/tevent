@@ -3,7 +3,8 @@ package tevent.http.endpoints
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.{AuthMiddleware, Router}
 import org.http4s.{AuthedRoutes, HttpRoutes}
-import tevent.domain.model.{EventParticipation, User}
+import tevent.domain.model.{EventFilter, EventParticipation, User}
+import tevent.http.model.event.EventFilters._
 import tevent.http.model.event.{EventForm, EventParticipationForm, EventUserParticipationData}
 import tevent.service.EventsService
 import zio._
@@ -33,6 +34,20 @@ final class EventsEndpoint[R <: EventsService] {
     }
     case POST -> Root / LongVar(id) / "leave" as user =>
       EventsService.leaveEvent(user.id, id).foldM(errorMapper, Ok(_))
+
+    case request@GET -> Root
+      :? OptionalFromDateQueryParamMatcher(fromDate)
+      +& OptionalToDateQueryParamMatcher(toDate)
+      +& OptionalOrganizationIdQueryParamMatcher(organizationId)
+      +& OptionalLocationQueryParamMatcher(location) as user =>
+      (fromDate.map(_.toEither), toDate.map(_.toEither), organizationId.map(_.toEither)) match {
+        case (Some(Left(_)), _, _) => BadRequest("unable to parse argument fromDate")
+        case (_, Some(Left(_)), _) => BadRequest("unable to parse argument toDate")
+        case (_, _, Some(Left(_))) => BadRequest("unable to parse argument organization")
+        case _ =>
+          val filter = EventFilter(organizationId.flatMap(_.toOption), fromDate.flatMap(_.toOption), toDate.flatMap(_.toOption), location)
+          EventsService.search(filter).foldM(errorMapper, Ok(_))
+      }
   }
 
   def routes(implicit middleware: AuthMiddleware[Task, User]): HttpRoutes[Task] = Router(

@@ -2,7 +2,7 @@ package tevent.service
 
 import tevent.domain.EntityNotFound.noneToNotFound
 import tevent.domain.Named.eventNamed
-import tevent.domain.model.{Event, EventParticipation, EventParticipationType, EventSubscriber, OfflineParticipant, OnlineParticipant, OrgManager, OrgMember, User}
+import tevent.domain.model.{Event, EventFilter, EventParticipation, EventParticipationType, EventSubscriber, OfflineParticipant, OnlineParticipant, OrgManager, OrgMember, User}
 import tevent.domain.repository.EventsRepository
 import tevent.domain.{DomainError, ValidationError}
 import zio.{IO, URLayer, ZIO, ZLayer}
@@ -13,7 +13,7 @@ object EventsService {
   trait Service {
     def get(id: Long): IO[DomainError, Option[Event]]
     def getUsers(userId: Long, eventId: Long): IO[DomainError, List[(User, EventParticipationType)]]
-    def getByOrganization(organizationId: Long): IO[DomainError, List[Event]]
+    def search(eventFilter: EventFilter): IO[DomainError, List[Event]]
     def getByUser(userId: Long): IO[DomainError, List[(Event, EventParticipationType)]]
     def update(userId: Long, event: Event): IO[DomainError, Unit]
     def create(userId: Long, event: Event): IO[DomainError, Event]
@@ -44,8 +44,8 @@ object EventsService {
       eventId <- events.add(event)
     } yield event.copy(id = eventId)
 
-    override def getByOrganization(organizationId: Long): IO[DomainError, List[Event]] =
-      events.getByOrganization(organizationId)
+    override def search(eventFilter: EventFilter): IO[DomainError, List[Event]] =
+      events.search(eventFilter)
 
     override def getByUser(userId: Long): IO[DomainError, List[(Event, EventParticipationType)]] =
       events.getByUser(userId)
@@ -78,8 +78,8 @@ object EventsService {
   def getUsers(userId: Long, eventId: Long): ZIO[EventsService, DomainError, List[(User, EventParticipationType)]] =
     ZIO.accessM(_.get.getUsers(userId, eventId))
 
-  def getByOrganization(organizationId: Long): ZIO[EventsService, DomainError, List[Event]] =
-    ZIO.accessM(_.get.getByOrganization(organizationId))
+  def search(eventFilter: EventFilter): ZIO[EventsService, DomainError, List[Event]] =
+    ZIO.accessM(_.get.search(eventFilter))
 
   def getByUser(userId: Long): ZIO[EventsService, DomainError, List[(Event, EventParticipationType)]] =
     ZIO.accessM(_.get.getByUser(userId))
