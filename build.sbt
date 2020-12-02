@@ -36,7 +36,8 @@ lazy val root = (project in file("."))
       "com.h2database"        %  "h2"                  % "1.4.200"
     ),
     addCompilerPlugin("org.typelevel" %% "kind-projector"     % "0.10.3"),
-    addCompilerPlugin("com.olegpy"    %% "better-monadic-for" % "0.3.1")
+    addCompilerPlugin("com.olegpy"    %% "better-monadic-for" % "0.3.1"),
+    testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
   )
 
 scalacOptions ++= Seq(
