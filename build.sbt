@@ -33,7 +33,8 @@ lazy val root = (project in file("."))
       "org.scalamock"         %% "scalamock"           % "4.4.0" % Test,
       "com.github.pureconfig" %% "pureconfig"          % "0.14.0",
       "com.github.t3hnar"     %% "scala-bcrypt"        % "4.3.0",
-      "com.h2database"        %  "h2"                  % "1.4.200"
+      "com.h2database"        %  "h2"                  % "1.4.200",
+      "com.github.daddykotex" %% "courier"             % "3.0.0-M2"
     ),
     addCompilerPlugin("org.typelevel" %% "kind-projector"     % "0.10.3"),
     addCompilerPlugin("com.olegpy"    %% "better-monadic-for" % "0.3.1"),
