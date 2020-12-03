@@ -1,8 +1,8 @@
 package tevent.notification
 
-import tevent.domain.model.{Event, Organization, User}
+import tevent.domain.model.{Event, OrgParticipationType, OrgSubscriber, Organization, User}
 import tevent.http.model.organization.{OrgParticipationRequest => _}
-import tevent.mock.InMemoryEmailSender
+import tevent.mock.{InMemoryEmailSender, InMemoryOrganizationsRepository}
 import tevent.service.NotificationService
 import zio.Ref
 import zio.test.Assertion.hasSameElements
@@ -15,12 +15,32 @@ object NotificationTest extends DefaultRunnableSpec {
 
   override def spec: ZSpec[TestEnvironment, Any] = suite("NotificationService")(
 
-    testM("send emails to all users") {
+    testM("send emails to all receivers") {
       for {
         receivers <- Ref.make(List.empty[String])
+        org <- Ref.make(Map.empty[Long, Organization])
+        participants <- Ref.make(Map.empty[Long, List[(User, OrgParticipationType)]])
+
         sender = InMemoryEmailSender.layer(receivers)
-        notifier = sender >>> NotificationService.live
+        orgRepo = InMemoryOrganizationsRepository.layer(org, participants)
+        notifier = (orgRepo ++ sender) >>> NotificationService.live
+
         _ <- NotificationService.notifyNewEvent(organization, event, users).provideSomeLayer(notifier)
+        receivers <- receivers.get
+      } yield assert(receivers)(hasSameElements(users.map(_.email)))
+    },
+
+    testM("send emails to all subscribers of organization") {
+      for {
+        receivers <- Ref.make(List.empty[String])
+        org <- Ref.make(Map(organization.id -> organization))
+        participants <- Ref.make(Map[Long, List[(User, OrgParticipationType)]](organization.id -> users.map((_, OrgSubscriber))))
+
+        sender = InMemoryEmailSender.layer(receivers)
+        orgRepo = InMemoryOrganizationsRepository.layer(org, participants)
+        notifier = (orgRepo ++ sender) >>> NotificationService.live
+
+        _ <- NotificationService.notifySubscribers(event).provideSomeLayer(notifier)
         receivers <- receivers.get
       } yield assert(receivers)(hasSameElements(users.map(_.email)))
     }

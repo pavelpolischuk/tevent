@@ -1,17 +1,28 @@
 package tevent.service
 
+import tevent.domain.Named.organizationNamed
 import tevent.domain.model.{Event, Organization, User}
-import tevent.domain.{DomainError, ExecutionError}
+import tevent.domain.repository.OrganizationsRepository
+import tevent.domain.{DomainError, EntityNotFound, ExecutionError}
 import tevent.infrastructure.service.{Email, EmailSender}
 import zio.{IO, URLayer, ZIO, ZLayer}
 
 
 object NotificationService {
   trait Service {
+    def notifySubscribers(event: Event): IO[DomainError, Unit]
     def notifyNewEvent(organization: Organization, event: Event, users: List[User]): IO[DomainError, Unit]
   }
 
-  class EmailNotificationService(email: EmailSender.Service) extends NotificationService.Service {
+  class EmailNotificationService(organizations: OrganizationsRepository.Service,
+                                 email: EmailSender.Service) extends NotificationService.Service {
+
+    override def notifySubscribers(event: Event): IO[DomainError, Unit] = for {
+      organization <- organizations.getById(event.organizationId).someOrFail(EntityNotFound(event.organizationId))
+      users <- organizations.getUsers(organization.id).map(_.map(_._1))
+      _ <- notifyNewEvent(organization, event, users)
+    } yield ()
+
     override def notifyNewEvent(organization: Organization, event: Event, users: List[User]): IO[DomainError, Unit] = {
       val subject = s"New event from ${organization.name}"
       val body = {
@@ -33,9 +44,13 @@ object NotificationService {
     }
   }
 
-  def live: URLayer[Email, NotificationService] =
-    ZLayer.fromService[EmailSender.Service, NotificationService.Service](new EmailNotificationService(_))
+  def live: URLayer[OrganizationsRepository with Email, NotificationService] =
+    ZLayer.fromServices[OrganizationsRepository.Service, EmailSender.Service, NotificationService.Service](
+      new EmailNotificationService(_, _))
 
+
+  def notifySubscribers(event: Event): ZIO[NotificationService, DomainError, Unit] =
+    ZIO.accessM(_.get.notifySubscribers(event))
 
   def notifyNewEvent(organization: Organization, event: Event, users: List[User]): ZIO[NotificationService, DomainError, Unit] =
     ZIO.accessM(_.get.notifyNewEvent(organization, event, users))

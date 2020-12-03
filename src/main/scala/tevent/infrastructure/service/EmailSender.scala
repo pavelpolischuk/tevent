@@ -2,7 +2,7 @@ package tevent.infrastructure.service
 
 import courier.{Envelope, Mailer, Text, addr}
 import tevent.infrastructure.Configuration.{Config, GmailConfig}
-import zio.{RIO, Task, ZIO}
+import zio.{RIO, Task, URLayer, ZIO}
 
 import javax.mail.internet.InternetAddress
 
@@ -28,8 +28,15 @@ object EmailSender {
     }
   }
 
-  val live: ZIO[Config, Nothing, GmailSender] =
-    ZIO.access[Config](_.get[GmailConfig]).map(c => new GmailSender(c))
+  val live: URLayer[Config, Email] =
+    ZIO.service[GmailConfig].map(c => new GmailSender(c)).toLayer
+
+  val empty: URLayer[Config, Email] =
+    ZIO.service[GmailConfig].as {
+      new Service {
+        override def sendMail(receiver: String, subject: String, content: String): Task[Unit] = Task.unit
+      }
+    }.toLayer
 
 
   def sendMail(receiver: String, subject: String, content: String): RIO[Email, Unit] =

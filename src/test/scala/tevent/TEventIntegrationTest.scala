@@ -1,9 +1,13 @@
 package tevent
 
 import tevent.domain.model.{Event, EventSubscriber, OfflineParticipant, OrgManager, OrgOwner, OrgSubscriber, Organization, User}
+import tevent.http.Server
 import tevent.http.model.event.{EventForm, EventParticipationData, EventParticipationForm, EventUserParticipationData}
 import tevent.http.model.organization.{OrgParticipationApprove, OrgParticipationData, OrgParticipationForm, OrgParticipationRequest, OrgUserParticipationData, OrganizationForm}
 import tevent.http.model.user.{LoginData, LoginForm, UserData, UserId}
+import tevent.infrastructure.Environments.testEnvironment
+import zio.console.Console
+import zio.{ExitCode, Fiber, Has, ZLayer}
 import zio.test.Assertion.{equalTo, hasSameElements, isEmpty, isTrue}
 import zio.test.TestAspect.sequential
 import zio.test._
@@ -141,7 +145,8 @@ object TEventIntegrationTest extends DefaultRunnableSpec {
 
   ).provideCustomLayerShared(httpServer) @@ sequential
 
-  private def httpServer = Main.run(List()).forkManaged.toLayer
+  private def httpServer: ZLayer[Any with Console, Nothing, Has[Fiber.Runtime[Nothing, ExitCode]]] =
+    Server.runServer.provideLayer(testEnvironment).exitCode.forkManaged.toLayer
 
   private val user = User(1, "Paul", "paul@g.com", "1234")
   private val userLogin = LoginForm(Some(user.name), user.email, user.secretHash)

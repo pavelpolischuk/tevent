@@ -22,7 +22,9 @@ object EventsService {
     def leaveEvent(userId: Long, eventId: Long): IO[DomainError, Unit]
   }
 
-  class EventsServiceImpl(events: EventsRepository.Service, participation: ParticipationService.Service) extends EventsService.Service {
+  class EventsServiceImpl(events: EventsRepository.Service,
+                          participation: ParticipationService.Service,
+                          notification: NotificationService.Service) extends EventsService.Service {
 
     override def get(id: Long): IO[DomainError, Option[Event]] = events.getById(id)
 
@@ -42,7 +44,9 @@ object EventsService {
     override def create(userId: Long, event: Event): IO[DomainError, Event] = for {
       _ <- participation.checkUser(userId, event.organizationId, OrgManager)
       eventId <- events.add(event)
-    } yield event.copy(id = eventId)
+      newEvent = event.copy(id = eventId)
+      _ <- notification.notifySubscribers(newEvent)
+    } yield newEvent
 
     override def search(eventFilter: EventFilter): IO[DomainError, List[Event]] =
       events.search(eventFilter)
@@ -69,8 +73,9 @@ object EventsService {
       events.removeUser(userId, eventId)
   }
 
-  def live: URLayer[EventsRepository with ParticipationService, EventsService] =
-    ZLayer.fromServices[EventsRepository.Service, ParticipationService.Service, EventsService.Service](new EventsServiceImpl(_, _))
+  def live: URLayer[EventsRepository with ParticipationService with NotificationService, EventsService] =
+    ZLayer.fromServices[EventsRepository.Service, ParticipationService.Service, NotificationService.Service, EventsService.Service](
+      new EventsServiceImpl(_, _, _))
 
   def get(id: Long): ZIO[EventsService, DomainError, Option[Event]] =
     ZIO.accessM(_.get.get(id))
