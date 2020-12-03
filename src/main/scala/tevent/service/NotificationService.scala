@@ -28,10 +28,10 @@ object NotificationService {
       val body = {
         val builder = new StringBuilder(
           s"""${event.name} (https://tevent.herokuapp.com/api/v1/events/${event.id})
-             |
-             |Organizer: ${organization.name} (https://tevent.herokuapp.com/api/v1/organizations/${organization.id})
-             |When: ${event.datetime}
-             |""".stripIndent)
+
+Organizer: ${organization.name} (https://tevent.herokuapp.com/api/v1/organizations/${organization.id})
+When: ${event.datetime}
+""")
 
         event.location.foreach(l => builder.addAll(s"Where: $l\n"))
         event.videoBroadcastLink.foreach(v => builder.addAll(s"Online broadcast: $v\n"))
