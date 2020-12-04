@@ -31,13 +31,13 @@ object EmailSender {
   val live: URLayer[Config, Email] =
     ZIO.service[GmailConfig].map(c => new GmailSender(c)).toLayer
 
-  val empty: URLayer[Config, Email] =
-    ZIO.service[GmailConfig].as {
-      new Service {
+  val option: URLayer[Config, Email] =
+    ZIO.service[GmailConfig].map(c =>
+      if (c.sender.isEmpty) new Service {
         override def sendMail(receiver: String, subject: String, content: String): Task[Unit] = Task.unit
       }
-    }.toLayer
-
+      else new GmailSender(c)
+    ).toLayer
 
   def sendMail(receiver: String, subject: String, content: String): RIO[Email, Unit] =
     ZIO.accessM(_.get.sendMail(receiver, subject, content))

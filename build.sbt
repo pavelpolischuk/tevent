@@ -34,6 +34,7 @@ lazy val root = (project in file("."))
       "com.github.pureconfig" %% "pureconfig"          % "0.14.0",
       "com.github.t3hnar"     %% "scala-bcrypt"        % "4.3.0",
       "com.h2database"        %  "h2"                  % "1.4.200",
+      "org.postgresql"        %  "postgresql"          % "42.2.18",
       "com.github.daddykotex" %% "courier"             % "3.0.0-M2"
     ),
     addCompilerPlugin("org.typelevel" %% "kind-projector"     % "0.10.3"),
