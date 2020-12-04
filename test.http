@@ -1,9 +1,10 @@
 GET http://tevent.herokuapp.com/api/v1/health
 ###
+
 POST http://tevent.herokuapp.com/api/v1/signin
 @Content-type: application/json
 
-{ "name": "Paul", "email": "paul@com", "secret": "1234" }
+{ "name": "Paul", "email": "paul@com", "secret": "123" }
 ###
 POST http://tevent.herokuapp.com/api/v1/login
 @Content-type: application/json
@@ -20,8 +21,14 @@ PUT http://tevent.herokuapp.com/api/v1/user
 POST http://tevent.herokuapp.com/api/v1/organizations
 @Content-type: application/json
 
-{ "name": "Paul Startup" }
+{ "name": "Scala Community" }
 ###
+POST http://tevent.herokuapp.com/api/v1/organizations/1/join
+@Content-type: application/json
+
+{ "participationType": "sub" }
+###
+
 POST http://tevent.herokuapp.com/api/v1/events
 @Content-type: application/json
 
@@ -30,6 +37,12 @@ POST http://tevent.herokuapp.com/api/v1/events
 GET http://tevent.herokuapp.com/api/v1/events?organization=1
 ###
 GET http://tevent.herokuapp.com/api/v1/user/organizations
+###
+
+POST http://tevent.herokuapp.com/api/v1/events/1/join
+@Content-type: application/json
+
+{ "participationType": "offline" }
 ###
 GET http://tevent.herokuapp.com/api/v1/user/events
 ###
