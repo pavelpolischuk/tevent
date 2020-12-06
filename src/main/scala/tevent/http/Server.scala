@@ -54,25 +54,4 @@ object Server {
       GZip(http)
     }
   }
-
-//  def stream[F[_] : ConcurrentEffect](implicit T: Timer[F], C: ContextShift[F]): Stream[F, Nothing] = {
-//    for {
-//      client <- BlazeClientBuilder[F](global).stream
-//      helloWorldAlg = HelloWorld.impl[F]
-//      jokeAlg = Jokes.impl[F](client)
-//
-//      httpApp = (
-//        TeventRoutes.helloWorldRoutes[F](helloWorldAlg) <+>
-//          TeventRoutes.jokeRoutes[F](jokeAlg)
-//        ).orNotFound
-//
-//      // With Middlewares in place
-//      finalHttpApp = Logger.httpApp(logHeaders = true, logBody = true)(httpApp)
-//
-//      exitCode <- BlazeServerBuilder[F](global)
-//        .bindHttp(8080, "0.0.0.0")
-//        .withHttpApp(finalHttpApp)
-//        .serve
-//    } yield exitCode
-//  }.drain
 }
