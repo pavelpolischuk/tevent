@@ -13,9 +13,9 @@ class OrgParticipationRequestsTable(val users: UsersTable, val organizations: Or
     def participationType: Rep[OrgParticipationType] = column("TYPE")
     def fromUserId: Rep[Long] = column("FROM_USER_ID")
 
-    def user = foreignKey("USER_FK", userId, users.All)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
-    def organization = foreignKey("ORGANIZATION_FK", organizationId, organizations.All)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
-    def fromUser = foreignKey("FROM_USER_FK", fromUserId, users.All)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
+    def user = foreignKey("ORG_PART_REQUEST_USER_FK", userId, users.All)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
+    def organization = foreignKey("ORG_PART_REQUEST_ORGANIZATION_FK", organizationId, organizations.All)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
+    def fromUser = foreignKey("ORG_PART_REQUEST_FROM_USER_FK", fromUserId, users.All)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
     def pk = index("ORG_PARTICIPATION_REQUESTS_PK", (userId, organizationId))
 
     override def * : ProvenShape[OrgParticipationRequest] = (userId, organizationId, participationType, fromUserId).<>(OrgParticipationRequest.mapperTo, OrgParticipationRequest.unapply)

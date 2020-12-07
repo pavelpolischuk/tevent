@@ -18,7 +18,7 @@ class EventsTable(val organizations: OrganizationsTable)(implicit val profile: J
     def capacity: Rep[Option[Int]] = column("CAPACITY", Nullable)
     def broadcastLink: Rep[Option[String]] = column("BROADCAST_LINK", Nullable)
 
-    def organization = foreignKey("ORGANIZATION_FK", organizationId, organizations.All)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
+    def organization = foreignKey("EVENT_ORGANIZATION_FK", organizationId, organizations.All)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
 
     override def * : ProvenShape[Event] = (id, organizationId, name, datetime, location, capacity, broadcastLink).<>(Event.mapperTo, Event.unapply)
   }

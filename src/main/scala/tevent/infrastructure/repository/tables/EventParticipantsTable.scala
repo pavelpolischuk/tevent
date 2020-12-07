@@ -12,8 +12,8 @@ class EventParticipantsTable(val users: UsersTable, val events: EventsTable)(imp
     def eventId: Rep[Long] = column("EVENT_ID")
     def participationType: Rep[EventParticipationType] = column("TYPE")
 
-    def user = foreignKey("USER_FK", userId, users.All)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
-    def event = foreignKey("EVENT_FK", eventId, events.All)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
+    def user = foreignKey("EVENT_PART_USER_FK", userId, users.All)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
+    def event = foreignKey("EVENT_PART_EVENT_FK", eventId, events.All)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
     def pk = primaryKey("EVENT_PARTICIPANTS_PK", (userId, eventId))
 
     override def * : ProvenShape[EventParticipation] = (userId, eventId, participationType).mapTo[EventParticipation]

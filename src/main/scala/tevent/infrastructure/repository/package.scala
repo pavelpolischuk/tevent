@@ -2,6 +2,7 @@ package tevent.infrastructure
 
 import slick.dbio.DBIO
 import slick.jdbc.JdbcProfile
+import slick.jdbc.meta.MTable
 import tevent.domain.RepositoryError
 import tevent.infrastructure.repository.tables._
 import zio._
@@ -28,15 +29,23 @@ package object repository {
       import profile.api._
 
       val users = r.get[UsersTable]
-      val events = r.get[EventsTable]
       val organizations = r.get[OrganizationsTable]
       val orgParticipants = r.get[OrgParticipantsTable]
       val orgParticipationRequests = r.get[OrgParticipationRequestsTable]
+      val events = r.get[EventsTable]
       val eventParticipants = r.get[EventParticipantsTable]
 
-      val createSchema = (users.All.schema ++ events.All.schema ++ organizations.All.schema
-        ++ orgParticipants.All.schema ++ orgParticipationRequests.All.schema ++ eventParticipants.All.schema).createIfNotExists
-      createSchema.toZIO.provide(db).orDie.map(_ => r)
+      val tables = List(users.All, organizations.All, orgParticipants.All, orgParticipationRequests.All, events.All, eventParticipants.All)
+      val existing = MTable.getTables.toZIO
+
+      existing.flatMap(v => {
+        val names = v.map(mt => mt.name.name)
+        val createIfNotExist = tables.filter(table =>
+          !names.contains(table.baseTableRow.tableName)).map(_.schema.create)
+        ZIO.foreach(createIfNotExist)(_.toZIO)
+      })
+        .provide(db)
+        .orDie.as(r)
     }
   }
 
