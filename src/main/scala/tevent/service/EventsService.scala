@@ -63,7 +63,7 @@ object EventsService {
       event <- events.getById(participation.eventId).flatMap(noneToNotFound(participation.eventId))
       oldType <- events.checkUser(participation.userId, participation.eventId)
       _ <- (event.capacity, participation.participationType, oldType) match {
-        case (Some(v), OfflineParticipant, Some(OnlineParticipant) | Some(EventSubscriber)) => checkEmptyPlaces(event.id, v)
+        case (Some(v), OfflineParticipant, Some(OnlineParticipant) | Some(EventSubscriber) | None) => checkEmptyPlaces(event.id, v)
         case _ => IO.unit
       }
       _ <- if (oldType.isEmpty) events.addUser(participation) else events.updateUser(participation)

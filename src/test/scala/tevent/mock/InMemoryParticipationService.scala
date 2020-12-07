@@ -53,8 +53,10 @@ class InMemoryParticipationService(user: User, organization: Organization,
 }
 
 object InMemoryParticipationService {
-  def layer(user: User, organization: Organization): ULayer[ParticipationService] = (for {
-    ref <- Ref.make(List.empty[(User, Organization, OrgParticipationType)])
-    req <- Ref.make(List.empty[(User, Organization, OrgParticipationType, Option[User])])
+  def layer(user: User, organization: Organization,
+            participants: List[(User, Organization, OrgParticipationType)] = List.empty,
+            requests: List[(User, Organization, OrgParticipationType, Option[User])] = List.empty): ULayer[ParticipationService] = (for {
+    ref <- Ref.make(participants)
+    req <- Ref.make(requests)
   } yield new InMemoryParticipationService(user, organization, ref, req)).toLayer
 }
