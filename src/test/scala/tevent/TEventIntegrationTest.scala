@@ -48,11 +48,13 @@ object TEventIntegrationTest extends DefaultRunnableSpec {
 
         added <- HttpClient.post[OrganizationForm, Organization]("http://localhost:8080/api/v1/organizations", token, organizationForm)
 
+        found <- HttpClient.get[List[Organization]]("http://localhost:8080/api/v1/organizations?tags=scala+dev", token)
         gotten <- HttpClient.get[Organization]("http://localhost:8080/api/v1/organizations/1", token)
         forUser <- HttpClient.get[List[OrgParticipationData]]("http://localhost:8080/api/v1/user/organizations", token)
         participation = OrgParticipationData(added, OrgOwner)
       } yield {
         assert(added)(equalTo(organization)) &&
+        assert(found)(equalTo(List(organization))) &&
         assert(gotten)(equalTo(added)) &&
         assert(forUser)(equalTo(List(participation)))
       }
@@ -157,8 +159,8 @@ object TEventIntegrationTest extends DefaultRunnableSpec {
   private val user2Login = LoginForm(Some(user2.name), user2.email, user2.secretHash)
   private val user2Id = UserId(user2.id, user2.name)
 
-  private val organization = Organization(1, "Paul Corp.")
-  private val organizationForm = OrganizationForm(organization.name)
+  private val organization = Organization(1, "Paul Corp.", List("scala", "dev"))
+  private val organizationForm = OrganizationForm(organization.name, organization.tags)
 
   private val ownerParticipation = OrgUserParticipationData(userId, OrgOwner)
   private val memberRequestForm = OrgParticipationForm(OrgManager)

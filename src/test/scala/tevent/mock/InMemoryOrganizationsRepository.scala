@@ -43,6 +43,8 @@ class InMemoryOrganizationsRepository(ref: Ref[Map[Long, Organization]],
   override def removeRequest(userId: Long, organizationId: Long): IO[RepositoryError, Unit] = ???
 
   override def updateRequest(request: OrgParticipationRequest): IO[RepositoryError, Unit] = ???
+
+  override def search(filter: OrganizationFilter): IO[RepositoryError, List[Organization]] = ???
 }
 
 

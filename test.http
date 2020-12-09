@@ -30,9 +30,16 @@ PUT http://tevent.herokuapp.com/api/v1/user
 POST http://tevent.herokuapp.com/api/v1/organizations
 @Content-type: application/json
 
-{ "name": "Scala Community" }
+{ "name": "Scala Community", "tags": [] }
+###
+PUT http://tevent.herokuapp.com/api/v1/organizations/1
+@Content-type: application/json
+
+{ "name": "Scala Community", "tags": ["scala", "dev"] }
 ###
 GET http://tevent.herokuapp.com/api/v1/organizations/1
+###
+GET http://tevent.herokuapp.com/api/v1/organizations?tags=dev
 ###
 POST http://tevent.herokuapp.com/api/v1/organizations/1/join
 @Content-type: application/json

@@ -9,7 +9,7 @@ import zio._
 
 package object repository {
   type Db = Has[Db.Service]
-  type Tables = UsersT with OrganizationsT with EventsT with OrgParticipantsT with EventParticipantsT with OrgParticipationRequestsT
+  type Tables = UsersT with OrganizationsT with EventsT with OrgParticipantsT with EventParticipantsT with OrgParticipationRequestsT with OrganizationTagsT
 
   object Tables {
     def live: URLayer[Db, Tables] = ZLayer.fromServiceMany { d =>
@@ -20,7 +20,8 @@ package object repository {
         val eventParticipants = new EventParticipantsTable(users, events)
         val orgParticipants = new OrgParticipantsTable(users, organizations)
         val orgParticipationRequests = new OrgParticipationRequestsTable(users, organizations)
-        Has(users) ++ Has(organizations) ++ Has(events) ++ Has(eventParticipants) ++ Has(orgParticipants) ++ Has(orgParticipationRequests)
+        val organizationTags = new OrganizationTagsTable(organizations)
+        Has(users) ++ Has(organizations) ++ Has(events) ++ Has(eventParticipants) ++ Has(orgParticipants) ++ Has(orgParticipationRequests) ++ Has(organizationTags)
       }
 
     def create: URLayer[Db with Tables, Db with Tables] = ZLayer.fromFunctionManyM { r: Db with Tables =>
@@ -34,8 +35,10 @@ package object repository {
       val orgParticipationRequests = r.get[OrgParticipationRequestsTable]
       val events = r.get[EventsTable]
       val eventParticipants = r.get[EventParticipantsTable]
+      val organizationTags = r.get[OrganizationTagsTable]
 
-      val tables = List(users.All, organizations.All, orgParticipants.All, orgParticipationRequests.All, events.All, eventParticipants.All)
+      val tables = List(users.All, organizations.All, orgParticipants.All,
+        orgParticipationRequests.All, events.All, eventParticipants.All, organizationTags.All)
       val existing = MTable.getTables.toZIO
 
       existing.flatMap(v => {

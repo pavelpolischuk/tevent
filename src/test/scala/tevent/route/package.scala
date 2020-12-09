@@ -3,12 +3,12 @@ package tevent
 import cats.data.{Kleisli, OptionT}
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.AuthMiddleware
-import org.http4s.{AuthedRoutes, EntityDecoder, Method, Request, Response, Status, Uri}
+import org.http4s._
 import tevent.domain.model.User
-import zio.{RIO, Task}
 import zio.interop.catz.taskConcurrentInstance
 import zio.test.Assertion.{equalTo, isEmpty}
 import zio.test.{TestResult, assert, assertM}
+import zio.{RIO, Task}
 
 package object route {
   def alwaysAuthMiddleware[R](user: User): AuthMiddleware[RIO[R, *], User] = {

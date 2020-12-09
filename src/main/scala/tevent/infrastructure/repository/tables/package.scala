@@ -11,6 +11,7 @@ package object tables {
   type EventParticipantsT = Has[EventParticipantsTable]
   type OrgParticipantsT = Has[OrgParticipantsTable]
   type OrgParticipationRequestsT = Has[OrgParticipationRequestsTable]
+  type OrganizationTagsT = Has[OrganizationTagsTable]
 
   private[repository] implicit def orgParticipationColumnType(implicit profile: JdbcProfile): JdbcType[OrgParticipationType] = {
     import profile.api._
@@ -40,5 +41,12 @@ package object tables {
         case 2 => OfflineParticipant
       }
     )
+  }
+
+  private[repository] case class PlainOrganization(id: Long, name: String)
+
+  private[repository] object PlainOrganization {
+    def mapperTo(tuple: (Long, String)): PlainOrganization =
+      PlainOrganization(tuple._1, tuple._2)
   }
 }

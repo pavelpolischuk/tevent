@@ -7,21 +7,22 @@ import tevent.domain.model.Organization
 class OrganizationsTable(implicit val profile: JdbcProfile) {
   import profile.api._
 
-  class Organizations(tag: Tag) extends Table[Organization](tag, "ORGANIZATIONS") {
+  class Organizations(tag: Tag) extends Table[PlainOrganization](tag, "ORGANIZATIONS") {
     def id: Rep[Long] = column("ID", O.PrimaryKey, O.AutoInc)
     def name: Rep[String] = column("NAME")
 
-    override def * : ProvenShape[Organization] = (id, name).<>(Organization.mapperTo, Organization.unapply)
+    override def * : ProvenShape[PlainOrganization] = (id, name).<>(PlainOrganization.mapperTo, PlainOrganization.unapply)
   }
 
   val All = TableQuery[Organizations]
 
-  def all: DBIO[Seq[Organization]] = All.result
+  def all: DBIO[Seq[PlainOrganization]] = All.result
 
   def add(organization: Organization): DBIO[Long] =
     (All.map(o => (o.name)) returning All.map(_.id)) += (organization.name)
 
-  def withId(id: Long): DBIO[Option[Organization]] = All.filter(_.id === id).result.headOption
+  def withId(id: Long): DBIO[Option[PlainOrganization]] =
+    All.filter(_.id === id).result.headOption
 
   def update(organization: Organization): DBIO[Int] = {
     val q = for { c <- All if c.id === organization.id } yield c.name

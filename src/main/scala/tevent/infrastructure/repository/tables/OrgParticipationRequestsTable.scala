@@ -23,7 +23,7 @@ class OrgParticipationRequestsTable(val users: UsersTable, val organizations: Or
 
   val All = TableQuery[OrgParticipationRequestsTable]
 
-  def forUser(userId: Long): DBIO[Seq[(Organization, OrgParticipationType, User)]] = (for {
+  def forUser(userId: Long): DBIO[Seq[(PlainOrganization, OrgParticipationType, User)]] = (for {
       part <- All if part.userId === userId
       org <- part.organization
       fromUser <- part.fromUser

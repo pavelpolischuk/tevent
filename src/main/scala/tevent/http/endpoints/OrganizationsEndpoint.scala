@@ -3,7 +3,8 @@ package tevent.http.endpoints
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.{AuthMiddleware, Router}
 import org.http4s.{AuthedRoutes, HttpRoutes}
-import tevent.domain.model.{OrgParticipation, User}
+import tevent.domain.model.{OrgParticipation, Organization, OrganizationFilter, User}
+import tevent.http.model.organization.OrganizationFilters.OptionalTagsQueryParamMatcher
 import tevent.http.model.organization._
 import tevent.service.{OrganizationsService, ParticipationService}
 import zio._
@@ -16,9 +17,19 @@ final class OrganizationsEndpoint[R <: OrganizationsService with ParticipationSe
   private val dsl = Http4sDsl[Task]
   import dsl._
 
-  private val httpRoutes = AuthedRoutes.of[User, Task] {
-    case GET -> Root / LongVar(id) as user =>
+  private val httpRoutes = HttpRoutes.of[Task] {
+    case GET -> Root / LongVar(id) =>
       OrganizationsService.get(id).foldM(errorMapper, _.fold(NotFound())(Ok(_)))
+
+    case GET -> Root
+      :? OptionalTagsQueryParamMatcher(tags) => tags.map(_.toEither) match {
+        case Some(Left(_)) => BadRequest("unable to parse argument tags")
+        case Some(Right(tags)) => OrganizationsService.search(OrganizationFilter(tags)).foldM(errorMapper, Ok(_))
+        case None => OrganizationsService.search(OrganizationFilter.All).foldM(errorMapper, Ok(_))
+      }
+  }
+
+  private val authedRoutes = AuthedRoutes.of[User, Task] {
     case GET -> Root / LongVar(id) / "requests" as user =>
       ParticipationService.getRequests(user.id, id).foldM(errorMapper,
         r => Ok(r.map(OrgParticipationRequest.mapperTo)))
@@ -27,7 +38,10 @@ final class OrganizationsEndpoint[R <: OrganizationsService with ParticipationSe
         r => Ok(r.map(OrgUserParticipationData.mapperTo)))
 
     case request@POST -> Root as user => request.req.decode[OrganizationForm] { form =>
-      OrganizationsService.create(user.id, form.name).foldM(errorMapper, Ok(_))
+      OrganizationsService.create(user.id, form.name, form.tags).foldM(errorMapper, Ok(_))
+    }
+    case request@PUT -> Root / LongVar(id) as user => request.req.decode[OrganizationForm] { form =>
+      OrganizationsService.update(user.id, Organization(id, form.name, form.tags)).foldM(errorMapper, Ok(_))
     }
 
     case request@POST -> Root / LongVar(id) / "join" as user => request.req.decode[OrgParticipationForm] { form =>
@@ -46,6 +60,7 @@ final class OrganizationsEndpoint[R <: OrganizationsService with ParticipationSe
   }
 
   def routes(implicit middleware: AuthMiddleware[Task, User]): HttpRoutes[Task] = Router(
-    prefixPath -> httpRoutes
+    prefixPath -> httpRoutes,
+    prefixPath -> authedRoutes
   )
 }

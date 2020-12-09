@@ -28,10 +28,12 @@ final class HealthEndpoint[R] {
       Route(Method.PUT, "/user"),
 
       Route(Method.POST, "/organizations"),
+      Route(Method.PUT, "/organizations/<id>"),
       Route(Method.POST, "/organizations/<id>/join"),
       Route(Method.POST, "/organizations/<id>/invite"),
       Route(Method.POST, "/organizations/<id>/approve"),
       Route(Method.POST, "/organizations/<id>/leave"),
+      Route(Method.GET, "/organizations?tags=<tag1+tag2>"),
       Route(Method.GET, "/organizations/<id>"),
       Route(Method.GET, "/organizations/<id>/requests"),
       Route(Method.GET, "/organizations/<id>/users"),

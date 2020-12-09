@@ -72,7 +72,7 @@ object EventsServiceTest extends DefaultRunnableSpec {
 
   private val user1 = User(1, "N1", "e1", "")
   private val user2 = User(2, "N2", "e2", "")
-  private val organization = Organization(1, "Paul Corp.")
+  private val organization = Organization(1, "Paul Corp.", List("scala", "dev"))
   private val event = Event(1, organization.id, "Paul Meetup #1", ZonedDateTime.now(), Some("Moscow"), Some(1), Some("video"))
   private val participation = EventParticipation(user2.id, event.id, OfflineParticipant)
 

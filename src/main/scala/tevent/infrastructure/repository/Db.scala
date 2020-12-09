@@ -3,7 +3,7 @@ package tevent.infrastructure.repository
 import slick.SlickException
 import slick.basic.BasicBackend
 import slick.jdbc.JdbcBackend.Database
-import slick.jdbc.{H2Profile, JdbcProfile}
+import slick.jdbc.JdbcProfile
 import slick.util.ClassLoaderUtil
 import tevent.infrastructure.Configuration
 import zio._

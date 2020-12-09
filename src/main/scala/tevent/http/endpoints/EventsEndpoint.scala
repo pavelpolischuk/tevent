@@ -17,9 +17,26 @@ final class EventsEndpoint[R <: EventsService] {
   private val dsl = Http4sDsl[Task]
   import dsl._
 
-  private val httpRoutes = AuthedRoutes.of[User, Task] {
-    case GET -> Root / LongVar(id) as user =>
+  private val httpRoutes = HttpRoutes.of[Task] {
+    case GET -> Root / LongVar(id) =>
       EventsService.get(id).foldM(errorMapper, _.fold(NotFound())(Ok(_)))
+
+    case GET -> Root
+      :? OptionalFromDateQueryParamMatcher(fromDate)
+      +& OptionalToDateQueryParamMatcher(toDate)
+      +& OptionalOrganizationIdQueryParamMatcher(organizationId)
+      +& OptionalLocationQueryParamMatcher(location) =>
+      (fromDate.map(_.toEither), toDate.map(_.toEither), organizationId.map(_.toEither)) match {
+        case (Some(Left(_)), _, _) => BadRequest("unable to parse argument fromDate")
+        case (_, Some(Left(_)), _) => BadRequest("unable to parse argument toDate")
+        case (_, _, Some(Left(_))) => BadRequest("unable to parse argument organization")
+        case _ =>
+          val filter = EventFilter(organizationId.flatMap(_.toOption), fromDate.flatMap(_.toOption), toDate.flatMap(_.toOption), location)
+          EventsService.search(filter).foldM(errorMapper, Ok(_))
+      }
+  }
+
+  private val authedRoutes = AuthedRoutes.of[User, Task] {
     case request@POST -> Root as user => request.req.decode[EventForm] { form =>
       EventsService.create(user.id, form.organizationId, form.name, form.datetime, form.location, form.capacity, form.videoBroadcastLink)
         .foldM(errorMapper, Ok(_))
@@ -34,23 +51,10 @@ final class EventsEndpoint[R <: EventsService] {
     }
     case POST -> Root / LongVar(id) / "leave" as user =>
       EventsService.leaveEvent(user.id, id).foldM(errorMapper, Ok(_))
-
-    case request@GET -> Root
-      :? OptionalFromDateQueryParamMatcher(fromDate)
-      +& OptionalToDateQueryParamMatcher(toDate)
-      +& OptionalOrganizationIdQueryParamMatcher(organizationId)
-      +& OptionalLocationQueryParamMatcher(location) as user =>
-      (fromDate.map(_.toEither), toDate.map(_.toEither), organizationId.map(_.toEither)) match {
-        case (Some(Left(_)), _, _) => BadRequest("unable to parse argument fromDate")
-        case (_, Some(Left(_)), _) => BadRequest("unable to parse argument toDate")
-        case (_, _, Some(Left(_))) => BadRequest("unable to parse argument organization")
-        case _ =>
-          val filter = EventFilter(organizationId.flatMap(_.toOption), fromDate.flatMap(_.toOption), toDate.flatMap(_.toOption), location)
-          EventsService.search(filter).foldM(errorMapper, Ok(_))
-      }
   }
 
   def routes(implicit middleware: AuthMiddleware[Task, User]): HttpRoutes[Task] = Router(
-    prefixPath -> httpRoutes
+    prefixPath -> httpRoutes,
+    prefixPath -> authedRoutes
   )
 }

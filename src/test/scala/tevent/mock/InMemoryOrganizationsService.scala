@@ -2,7 +2,7 @@ package tevent.mock
 
 import tevent.domain.Named.organizationNamed
 import tevent.domain.{DomainError, EntityNotFound}
-import tevent.domain.model.Organization
+import tevent.domain.model.{Organization, OrganizationFilter}
 import tevent.service.OrganizationsService
 import zio._
 
@@ -21,11 +21,15 @@ class InMemoryOrganizationsService(ref: Ref[Map[Long, Organization]], counter: R
       }
     } yield result
 
-  override def create(userId: Long, name: String): IO[DomainError, Organization] = for {
+  override def create(userId: Long, name: String, tags: List[String]): IO[DomainError, Organization] = for {
     newId <- counter.updateAndGet(_ + 1)
-    org   = Organization(newId, name)
+    org   = Organization(newId, name, tags)
     _     <- ref.update(store => store + (newId -> org))
   } yield org
+
+  override def search(filter: OrganizationFilter): IO[DomainError, List[Organization]] =
+    if (filter.isEmpty) ref.get.map(_.values.toList)
+    else ref.get.map(_.values.filter(org => org.tags.exists(filter.tags.contains(_))).toList)
 }
 
 object InMemoryOrganizationsService {
