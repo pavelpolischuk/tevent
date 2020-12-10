@@ -2,7 +2,7 @@ package tevent.http
 
 import cats.data.Kleisli
 import cats.effect.ExitCode
-import cats.implicits._
+import cats.implicits.toSemigroupKOps
 import org.http4s.implicits._
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.server.middleware.{AutoSlash, GZip}
@@ -42,7 +42,8 @@ object Server {
     val eventsRoutes = new EventsEndpoint[AppEnvironment].routes
     val organizationsRoutes = new OrganizationsEndpoint[AppEnvironment].routes
     val healthRoutes = new HealthEndpoint[AppEnvironment].routes
-    val routes = authEndpoint.routes <+> usersRoutes <+> healthRoutes <+> organizationsRoutes <+> eventsRoutes
+    val authRoutes = authEndpoint.routes
+    val routes = usersRoutes <+> eventsRoutes <+> organizationsRoutes <+> healthRoutes <+> authRoutes
 
     Router[ServerRIO](basePath -> middleware(routes)).orNotFound
   }

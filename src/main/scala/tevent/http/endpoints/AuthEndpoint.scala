@@ -3,7 +3,6 @@ package tevent.http.endpoints
 import cats.data.{Kleisli, OptionT}
 import org.http4s._
 import org.http4s.dsl.Http4sDsl
-import org.http4s.server.Router
 import tevent.domain.model.User
 import tevent.domain.{DomainError, ValidationError}
 import tevent.http.model.user.{LoginData, LoginForm}
@@ -16,7 +15,6 @@ import zio.{RIO, ZIO}
 final class AuthEndpoint[R <: AuthService with Crypto with Clock] {
   type Task[A] = RIO[R, A]
 
-  private val prefixPath = "/"
   private val dsl = Http4sDsl[Task]
   import dsl._
 
@@ -48,7 +46,5 @@ final class AuthEndpoint[R <: AuthService with Crypto with Clock] {
     }
   }
 
-  def routes: HttpRoutes[Task] = Router(
-    prefixPath -> httpRoutes
-  )
+  def routes: HttpRoutes[Task] = httpRoutes
 }

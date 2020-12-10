@@ -14,7 +14,6 @@ import zio.interop.catz.taskConcurrentInstance
 final class UserEndpoint[R <: UsersService with ParticipationService with EventsService] {
   type Task[A] = RIO[R, A]
 
-  private val prefixPath = "/user"
   private val dsl = Http4sDsl[Task]
   import dsl._
 
@@ -34,7 +33,6 @@ final class UserEndpoint[R <: UsersService with ParticipationService with Events
         r => Ok(r.map(OwnOrgParticipationRequest.mapperTo)))
   }
 
-  def routes(implicit middleware: AuthMiddleware[Task, User]): HttpRoutes[Task] = Router(
-    prefixPath -> httpRoutes
-  )
+  def routes(implicit middleware: AuthMiddleware[Task, User]): HttpRoutes[Task] =
+    Router("/user" -> httpRoutes)
 }

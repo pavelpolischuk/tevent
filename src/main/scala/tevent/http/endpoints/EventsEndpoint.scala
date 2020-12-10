@@ -1,5 +1,6 @@
 package tevent.http.endpoints
 
+import cats.implicits.toSemigroupKOps
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.{AuthMiddleware, Router}
 import org.http4s.{AuthedRoutes, HttpRoutes}
@@ -13,7 +14,6 @@ import zio.interop.catz.taskConcurrentInstance
 final class EventsEndpoint[R <: EventsService] {
   type Task[A] = RIO[R, A]
 
-  private val prefixPath = "/events"
   private val dsl = Http4sDsl[Task]
   import dsl._
 
@@ -53,8 +53,6 @@ final class EventsEndpoint[R <: EventsService] {
       EventsService.leaveEvent(user.id, id).foldM(errorMapper, Ok(_))
   }
 
-  def routes(implicit middleware: AuthMiddleware[Task, User]): HttpRoutes[Task] = Router(
-    prefixPath -> httpRoutes,
-    prefixPath -> authedRoutes
-  )
+  def routes(implicit middleware: AuthMiddleware[Task, User]): HttpRoutes[Task] =
+    Router("/events" -> (httpRoutes <+> middleware(authedRoutes)))
 }

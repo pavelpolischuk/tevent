@@ -2,7 +2,6 @@ package tevent.http.endpoints
 
 import org.http4s.HttpRoutes
 import org.http4s.dsl.Http4sDsl
-import org.http4s.server.Router
 import tevent.http.model.{Method, Route}
 import zio._
 import zio.interop.catz.core._
@@ -10,7 +9,6 @@ import zio.interop.catz.core._
 final class HealthEndpoint[R] {
   type Task[A] = RIO[R, A]
 
-  private val prefixPath = "/"
   private val dsl: Http4sDsl[Task] = Http4sDsl[Task]
   import dsl._
 
@@ -47,7 +45,5 @@ final class HealthEndpoint[R] {
     ))
   }
 
-  val routes: HttpRoutes[Task] = Router(
-    prefixPath -> httpRoutes
-  )
+  val routes: HttpRoutes[Task] = httpRoutes
 }

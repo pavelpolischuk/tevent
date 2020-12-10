@@ -1,23 +1,25 @@
-GET http://tevent.herokuapp.com/api/v1
-###
-GET http://tevent.herokuapp.com/api/v1/health
-###
-
-
-
-
+### SIGN IN
 POST http://tevent.herokuapp.com/api/v1/signin
 @Content-type: application/json
 
-{ "name": "Paul", "email": "paul@com", "secret": "123" }
-###
+{ "name": "Turist", "email": "paul@ya.ruuu", "secret": "8765" }
+
+### LOGIN
 POST http://tevent.herokuapp.com/api/v1/login
 @Content-type: application/json
 
-{ "email": "paul@com", "secret": "234" }
-###
+{ "email": "paul@ya.ruuu", "secret": "1234" }
+
+
+
+
+
+
+
+### USER INFO
 GET http://tevent.herokuapp.com/api/v1/user
 ###
+
 PUT http://tevent.herokuapp.com/api/v1/user
 @Content-type: application/json
 
@@ -27,45 +29,77 @@ PUT http://tevent.herokuapp.com/api/v1/user
 
 
 
+
+
+### ADD ORGANIZATION
 POST http://tevent.herokuapp.com/api/v1/organizations
 @Content-type: application/json
 
-{ "name": "Scala Community", "tags": [] }
-###
+{ "name": "Dev Community", "tags": ["dev"] }
+
+### CHANGE
 PUT http://tevent.herokuapp.com/api/v1/organizations/1
 @Content-type: application/json
 
-{ "name": "Scala Community", "tags": ["scala", "dev"] }
-###
+{ "name": "Developers Community", "tags": ["dev", "it"] }
+
+
+
+### INFO & SEARCH
 GET http://tevent.herokuapp.com/api/v1/organizations/1
 ###
 GET http://tevent.herokuapp.com/api/v1/organizations?tags=dev
-###
+
+
+
+### SUBSCRIBE TO ORGANIZATION (sub, member, manager, owner)
 POST http://tevent.herokuapp.com/api/v1/organizations/1/join
 @Content-type: application/json
 
 { "participationType": "sub" }
-###
+
+### GET USERS
+GET http://tevent.herokuapp.com/api/v1/organizations/1/users
+
+### UNSUBSCRIBE
+POST http://tevent.herokuapp.com/api/v1/organizations/1/leave
 
 
 
 
+
+
+### CREATE EVENT
 POST http://tevent.herokuapp.com/api/v1/events
 @Content-type: application/json
 
 { "organizationId": 1, "name": "Meetup #1", "datetime": "2021-01-10T10:15:30+03:00", "location": "Moscow", "capacity": 100 }
+
+
+
+### INFO & SEARCH
+GET http://tevent.herokuapp.com/api/v1/events/1
 ###
 GET http://tevent.herokuapp.com/api/v1/events?organization=1
-###
-GET http://tevent.herokuapp.com/api/v1/user/organizations
-###
 
+
+
+### REGISTER TO EVENT (online, offline)
 POST http://tevent.herokuapp.com/api/v1/events/1/join
 @Content-type: application/json
 
 { "participationType": "offline" }
-###
-GET http://tevent.herokuapp.com/api/v1/user/events
+
+### GET USERS
+GET http://tevent.herokuapp.com/api/v1/events/1/users
 ###
 POST http://tevent.herokuapp.com/api/v1/events/1/leave
+
+
+
+
+
+### USER EVENTS & ORGANIZATIONS
+GET http://tevent.herokuapp.com/api/v1/user/events
 ###
+GET http://tevent.herokuapp.com/api/v1/user/organizations
