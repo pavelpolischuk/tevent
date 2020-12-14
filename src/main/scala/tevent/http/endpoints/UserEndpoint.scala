@@ -6,12 +6,12 @@ import org.http4s.{AuthedRoutes, HttpRoutes}
 import tevent.domain.model.User
 import tevent.http.model.event.EventParticipationData
 import tevent.http.model.organization.{OrgParticipationData, OwnOrgParticipationRequest}
-import tevent.http.model.user.UserData
-import tevent.service.{EventsService, ParticipationService, UsersService}
+import tevent.http.model.user.{LoginData, SecretForm, UserData}
+import tevent.service.{AuthService, EventsService, ParticipationService, UsersService}
 import zio._
 import zio.interop.catz.taskConcurrentInstance
 
-final class UserEndpoint[R <: UsersService with ParticipationService with EventsService] {
+final class UserEndpoint[R <: UsersService with AuthService with ParticipationService with EventsService] {
   type Task[A] = RIO[R, A]
 
   private val dsl = Http4sDsl[Task]
@@ -22,6 +22,15 @@ final class UserEndpoint[R <: UsersService with ParticipationService with Events
     case request@PUT -> Root as user => request.req.decode[UserData] { form =>
       UsersService.update(user.id, form.name, form.email).foldM(errorMapper, _ => Ok())
     }
+
+    case POST -> Root / "revoke" as user =>
+      AuthService.revokeTokens(user.id).foldM(errorMapper, _ => Ok())
+    case request@PUT -> Root / "secret" as user => request.req.decode[SecretForm] { form =>
+      AuthService.changeSecret(user.id, form.secret).foldM(
+        failure = errorMapper,
+        success = token => Ok(LoginData("Secret changed, use new token", token.signedString)))
+    }
+
     case GET -> Root / "events" as user =>
       EventsService.getByUser(user.id).foldM(errorMapper,
         p => Ok(p.map(EventParticipationData.mapperTo)))

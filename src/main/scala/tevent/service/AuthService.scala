@@ -1,59 +1,68 @@
 package tevent.service
 
-import tevent.domain.model.User
+import tevent.domain.model.{User, UserToken}
+import tevent.domain.repository.UsersRepository
 import tevent.domain.{DomainError, ValidationError}
 import tevent.infrastructure.service.Crypto
 import zio.clock.Clock
 import zio.{IO, URLayer, ZIO, ZLayer}
 
-import scala.util.Try
-
 object AuthService {
   trait Service {
-    def login(email: String, secret: String, nonce: String): IO[DomainError, String]
-    def signIn(name: String, email: String, secret: String, nonce: String): IO[DomainError, String]
+    def login(email: String, secret: String): IO[DomainError, UserToken]
+    def signIn(name: String, email: String, secret: String): IO[DomainError, UserToken]
     def validateUser(token: String): IO[DomainError, User]
+    def changeSecret(id: Long, secret: String): IO[DomainError, UserToken]
+    def revokeTokens(id: Long): IO[DomainError, Unit]
   }
 
-  val live: URLayer[Crypto with UsersService, AuthService] = ZLayer.fromServices[Crypto.Service, UsersService.Service, Service] { (c, u) =>
+  val live: URLayer[Clock with Crypto with UsersService with UsersRepository, AuthService] = ZLayer.fromServices[Clock.Service, Crypto.Service, UsersService.Service, UsersRepository.Service, Service] { (clock, crypto, users, repo) =>
     new Service {
-      override def login(email: String, secret: String, nonce: String): IO[DomainError, String] = for {
-        user <- u.findWithEmail(email)
-        verified <- c.verifySecret(secret, user.secretHash)
-        token <- if (verified) c.signToken(user.id.toString, nonce) else IO.fail(ValidationError("Bad secret"))
+      override def login(email: String, secret: String): IO[DomainError, UserToken] = for {
+        user <- users.findWithEmail(email)
+        _ <- crypto.verifySecret(secret, user.secretHash)
+          .filterOrFail[DomainError](a => a)(ValidationError("Bad secret"))
+        issueTime <- clock.nanoTime
+        token <- crypto.getSignedToken(user.id, issueTime)
       } yield token
 
-      override def signIn(name: String, email: String, secret: String, nonce: String): IO[DomainError, String] = for {
-        secret <- c.dbSecret(secret)
-        user <- u.createUser(name, email, secret)
-        token <- c.signToken(user.id.toString, nonce)
+      override def signIn(name: String, email: String, secret: String): IO[DomainError, UserToken] = for {
+        secret <- crypto.dbSecret(secret)
+        user <- users.createUser(name, email, secret)
+        issueTime <- clock.nanoTime
+        token <- crypto.getSignedToken(user.id, issueTime)
       } yield token
 
       override def validateUser(token: String): IO[DomainError, User] = for {
-        idPart <- c.validateSignedToken(token)
-        userId <- ZIO.fromTry(Try(idPart.toLong))
-          .mapError[DomainError](_ => ValidationError("Invalid token format"))
-        user <- u.get(userId)
+        token <- crypto.validateSignedToken(token)
+        user <- users.get(token.id).filterOrFail(_.lastRevoke <= token.issueTime)(ValidationError("Token revoked"))
       } yield user
+
+      override def changeSecret(id: Long, secret: String): IO[DomainError, UserToken] = for {
+        revokeTime <- clock.nanoTime
+        _ <- repo.changeSecret(id, secret, revokeTime)
+        token <- crypto.getSignedToken(id, revokeTime)
+      } yield token
+
+      override def revokeTokens(id: Long): IO[DomainError, Unit] = for {
+        revokeTime <- clock.nanoTime
+        _ <- repo.revokeTokens(id, revokeTime)
+      } yield ()
     }
   }
 
-  def login(email: String, secret: String): ZIO[AuthService with Clock, DomainError, String] =
-    ZIO.accessM { e =>
-      for {
-        nonce <- e.get[Clock.Service].nanoTime
-        token <- e.get[AuthService.Service].login(email, secret, nonce.toString)
-      } yield token
-    }
+  def login(email: String, secret: String): ZIO[AuthService, DomainError, UserToken] =
+    ZIO.accessM(_.get.login(email, secret))
 
-  def signIn(name: String, email: String, secret: String): ZIO[AuthService with Clock, DomainError, String] =
-    ZIO.accessM { e =>
-      for {
-        nonce <- e.get[Clock.Service].nanoTime
-        token <- e.get[AuthService.Service].signIn(name, email, secret, nonce.toString)
-      } yield token
-    }
+  def signIn(name: String, email: String, secret: String): ZIO[AuthService, DomainError, UserToken] =
+    ZIO.accessM(_.get.signIn(name, email, secret))
 
   def validateUser(token: String): ZIO[AuthService, DomainError, User] =
     ZIO.accessM(_.get.validateUser(token))
+
+  def changeSecret(id: Long, secret: String): ZIO[AuthService, DomainError, UserToken] =
+    ZIO.accessM(_.get.changeSecret(id, secret))
+
+  def revokeTokens(id: Long): ZIO[AuthService, DomainError, Unit] =
+    ZIO.accessM(_.get.revokeTokens(id))
 }

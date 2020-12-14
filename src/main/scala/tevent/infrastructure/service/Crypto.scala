@@ -1,5 +1,6 @@
 package tevent.infrastructure.service
 
+import tevent.domain.model.UserToken
 import tevent.domain.{DomainError, ExecutionError, ValidationError}
 import tevent.infrastructure.Configuration.{Config, HttpServerConfig}
 import zio.{IO, Task, URLayer, ZIO}
@@ -10,8 +11,8 @@ object Crypto {
     def dbSecret(userSecret: String, rounds: Int = 12): IO[ExecutionError, String]
     def verifySecret(userSecret: String, dbSecret: String): IO[ExecutionError, Boolean]
     def sign(message: String): IO[ExecutionError, String]
-    def signToken(token: String, nonce: String): IO[ExecutionError, String]
-    def validateSignedToken(token: String): IO[DomainError, String]
+    def getSignedToken(userId: Long, issueTime: Long): IO[ExecutionError, UserToken]
+    def validateSignedToken(token: String): IO[DomainError, UserToken]
   }
 
   class BcryptService(secret: String) extends Service {
@@ -34,17 +35,14 @@ object Crypto {
         mac.doFinal(message.getBytes("utf-8")).map("%02X" format _).mkString
       }.mapError(ExecutionError)
 
-    override def validateSignedToken(token: String): IO[DomainError, String] =
-      ZIO.succeed(token.split("-", 3)).flatMap {
-        case Array(signature, raw, nonce) => sign(s"$raw-$nonce")
-          .filterOrFail[DomainError](signature.equals)(ValidationError("Invalid token")).as(raw)
-        case _ => ZIO.fail(ValidationError("Invalid token format"))
-      }
-
-    override def signToken(token: String, nonce: String): IO[ExecutionError, String] = for {
-      joined <- IO.succeed(s"$token-$nonce")
+    override def getSignedToken(userId: Long, issueTime: Long): IO[ExecutionError, UserToken] = for {
+      joined <- UserToken.unsignedString(userId, issueTime)
       sign <- sign(joined)
-    } yield s"$sign-$joined"
+    } yield UserToken(sign, userId, issueTime)
+
+    override def validateSignedToken(token: String): IO[DomainError, UserToken] =
+      UserToken.fromSignedString(token).tap(t => UserToken.unsignedString(t.id, t.issueTime).flatMap(sign)
+        .filterOrFail[DomainError](t.sign.equals)(ValidationError("Invalid token")))
   }
 
   val bcrypt: URLayer[Config, Crypto] =
@@ -57,6 +55,9 @@ object Crypto {
   def verifySecret(userSecret: String, dbSecret: String): ZIO[Crypto, ExecutionError, Boolean] =
     ZIO.accessM(_.get.verifySecret(userSecret, dbSecret))
 
-  def signToken(token: String, nonce: String): ZIO[Crypto, ExecutionError, String] =
-    ZIO.accessM(_.get.signToken(token, nonce))
+  def getSignedToken(userId: Long, issueTime: Long): ZIO[Crypto, ExecutionError, UserToken] =
+    ZIO.accessM(_.get.getSignedToken(userId, issueTime))
+
+  def validateSignedToken(token: String): ZIO[Crypto, DomainError, UserToken] =
+    ZIO.accessM(_.get.validateSignedToken(token))
 }

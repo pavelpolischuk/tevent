@@ -28,10 +28,10 @@ object TEventIntegrationTest extends DefaultRunnableSpec {
     testM("can sign-in, login & get user") {
       for {
         response <- HttpClient.post[LoginForm, LoginData]("http://localhost:8080/api/v1/signin", userLogin)
-        userId1 = response.token.split('-')(1).toLong
+        userId1 = response.token.split('.')(1).toLong
 
         response <- HttpClient.post[LoginForm, LoginData]("http://localhost:8080/api/v1/login", userLogin)
-        userId2 = response.token.split('-')(1).toLong
+        userId2 = response.token.split('.')(1).toLong
 
         newUser <- HttpClient.get[UserData]("http://localhost:8080/api/v1/user", response.token)
       } yield {
@@ -150,12 +150,12 @@ object TEventIntegrationTest extends DefaultRunnableSpec {
   private def httpServer: ZLayer[Any with Console, Nothing, Has[Fiber.Runtime[Nothing, ExitCode]]] =
     Server.runServer.provideLayer(testEnvironment).exitCode.forkManaged.toLayer
 
-  private val user = User(1, "Paul", "paul@g.com", "1234")
+  private val user = User(1, "Paul", "paul@g.com", "1234", 0)
   private val userLogin = LoginForm(Some(user.name), user.email, user.secretHash)
   private val userId = UserId(user.id, user.name)
   private val userData = UserData(user.name, user.email)
 
-  private val user2 = User(2, "Phil", "phil@g.com", "2345")
+  private val user2 = User(2, "Phil", "phil@g.com", "2345", 0)
   private val user2Login = LoginForm(Some(user2.name), user2.email, user2.secretHash)
   private val user2Id = UserId(user2.id, user2.name)
 

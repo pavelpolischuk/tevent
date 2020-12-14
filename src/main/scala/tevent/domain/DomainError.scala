@@ -19,6 +19,8 @@ object EntityNotFound {
 
 case class ValidationError(override val message: String) extends DomainError
 
+object TokenFormatInvalid extends ValidationError("Invalid token format")
+
 object AccessError extends DomainError {
   override val message: String = "Forbidden"
 }

@@ -3,6 +3,7 @@ package tevent.http.endpoints
 import cats.data.{Kleisli, OptionT}
 import org.http4s._
 import org.http4s.dsl.Http4sDsl
+import org.http4s.headers.Authorization
 import tevent.domain.model.User
 import tevent.domain.{DomainError, ValidationError}
 import tevent.http.model.user.{LoginData, LoginForm}
@@ -23,25 +24,27 @@ final class AuthEndpoint[R <: AuthService with Crypto with Clock] {
   }
 
   def authUser: Kleisli[Task, Request[Task], Either[DomainError, User]] = Kleisli({ request =>
-    val value = for {
-      header <- ZIO.fromEither(headers.Cookie.from(request.headers).toRight(ValidationError("Cookie parsing error")))
-      cookie <- ZIO.fromEither(header.values.toList.find(_.name == "authcookie").toRight(ValidationError("Couldn't find the authcookie")))
-      res <- AuthService.validateUser(cookie.content)
-    } yield res
-    value.fold(f => Left(f), u => Right(u))
+    ZIO.fromEither(request.headers.get(Authorization)
+      .map(_.credentials)
+      .flatMap {
+        case Credentials.Token(scheme, token) if scheme == AuthScheme.Bearer => Some(token)
+        case _ => None
+      }
+      .toRight(ValidationError("Couldn't find an Authorization Bearer header")))
+      .flatMap(AuthService.validateUser).fold(f => Left(f), u => Right(u))
   })
 
   private val httpRoutes = HttpRoutes.of[Task] {
     case request@POST -> Root / "signin" => request.decode[LoginForm] { form =>
       AuthService.signIn(form.name.getOrElse(""), form.email, form.secret).foldM(
         failure = errorMapper,
-        success = token => Ok(LoginData("Signed in", token)).map(_.addCookie(ResponseCookie("authcookie", token)))
+        success = token => Ok(LoginData("Signed in", token.signedString))
       )
     }
     case request@POST -> Root / "login" => request.decode[LoginForm] { form =>
       AuthService.login(form.email, form.secret).foldM(
           failure = errorMapper,
-          success = token => Ok(LoginData("Logged in", token)).map(_.addCookie(ResponseCookie("authcookie", token)))
+          success = token => Ok(LoginData("Logged in", token.signedString))
         )
     }
   }

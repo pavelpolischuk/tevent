@@ -68,7 +68,7 @@ object OrganizationsEndpointTest extends DefaultRunnableSpec {
   ).provideSomeLayer(InMemoryOrganizationsService.layer ++ InMemoryParticipationService.layer(user, organization))
 
 
-  private val user = User(1, "Paul", "paul@g.com", "1234")
+  private val user = User(1, "Paul", "paul@g.com", "1234", 0)
   private val userId = UserId(user.id, user.name)
   private val organization = Organization(1, "Paul Corp.", List("scala", "dev"))
   private val organizationForm = OrganizationForm(organization.name, organization.tags)
