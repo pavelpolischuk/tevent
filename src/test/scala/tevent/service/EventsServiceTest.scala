@@ -57,14 +57,14 @@ object EventsServiceTest extends DefaultRunnableSpec {
       val notification = NotificationServiceMock.NotifySubscribers(equalTo(event))
       val service = participations ++ notification ++ repository >>> EventsService.live
       for {
-        result <- EventsService.create(user1.id, organization.id, event.name, event.datetime, event.location, event.capacity, event.videoBroadcastLink).provideSomeLayer(service)
+        result <- EventsService.create(user1.id, event.copy(id = -1)).provideSomeLayer(service)
       } yield assert(result)(equalTo(event))
     },
 
     testM("fail create event if has not rights") {
       val repository = EventsRepositoryMock.Empty
       val service = participations ++ notification ++ repository >>> EventsService.live
-      val action = EventsService.create(user2.id, organization.id, event.name, event.datetime, event.location, event.capacity, event.videoBroadcastLink).provideSomeLayer(service).run
+      val action = EventsService.create(user2.id, event.copy(id = -1)).provideSomeLayer(service).run
       assertM(action)(fails(equalTo(AccessError)))
     },
 
@@ -72,8 +72,8 @@ object EventsServiceTest extends DefaultRunnableSpec {
 
   private val user1 = User(1, "N1", "e1", "", 0)
   private val user2 = User(2, "N2", "e2", "", 0)
-  private val organization = Organization(1, "Paul Corp.", List("scala", "dev"))
-  private val event = Event(1, organization.id, "Paul Meetup #1", ZonedDateTime.now(), Some("Moscow"), Some(1), Some("video"))
+  private val organization = Organization(1, "Paul Corp.", "pcorp", "Description", List("scala", "dev"))
+  private val event = Event(1, organization.id, "Paul Meetup #1", "Meetup Description", ZonedDateTime.now(), Some("Moscow"), Some(1), Some("video"))
   private val participation = EventParticipation(user2.id, event.id, OfflineParticipant)
 
   private val notification = NotificationServiceMock.Empty

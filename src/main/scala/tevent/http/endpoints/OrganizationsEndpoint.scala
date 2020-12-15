@@ -38,10 +38,10 @@ final class OrganizationsEndpoint[R <: OrganizationsService with ParticipationSe
         r => Ok(r.map(OrgUserParticipationData.mapperTo)))
 
     case request@POST -> Root as user => request.req.decode[OrganizationForm] { form =>
-      OrganizationsService.create(user.id, form.name, form.tags).foldM(errorMapper, Ok(_))
+      OrganizationsService.create(user.id, Organization(-1, form.name, form.nick, form.description, form.tags)).foldM(errorMapper, Ok(_))
     }
     case request@PUT -> Root / LongVar(id) as user => request.req.decode[OrganizationForm] { form =>
-      OrganizationsService.update(user.id, Organization(id, form.name, form.tags)).foldM(errorMapper, Ok(_))
+      OrganizationsService.update(user.id, Organization(id, form.name, form.nick, form.description, form.tags)).foldM(errorMapper, Ok(_))
     }
 
     case request@POST -> Root / LongVar(id) / "join" as user => request.req.decode[OrgParticipationForm] { form =>

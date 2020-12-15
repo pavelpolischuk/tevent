@@ -4,7 +4,7 @@ import cats.implicits.toSemigroupKOps
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.{AuthMiddleware, Router}
 import org.http4s.{AuthedRoutes, HttpRoutes}
-import tevent.domain.model.{EventFilter, EventParticipation, User}
+import tevent.domain.model.{Event, EventFilter, EventParticipation, User}
 import tevent.http.model.event.EventFilters._
 import tevent.http.model.event.{EventForm, EventParticipationForm, EventUserParticipationData}
 import tevent.service.EventsService
@@ -38,8 +38,8 @@ final class EventsEndpoint[R <: EventsService] {
 
   private val authedRoutes = AuthedRoutes.of[User, Task] {
     case request@POST -> Root as user => request.req.decode[EventForm] { form =>
-      EventsService.create(user.id, form.organizationId, form.name, form.datetime, form.location, form.capacity, form.videoBroadcastLink)
-        .foldM(errorMapper, Ok(_))
+      val event = Event(-1, form.organizationId, form.name, form.nick, form.datetime, form.location, form.capacity, form.videoBroadcastLink)
+      EventsService.create(user.id, event).foldM(errorMapper, Ok(_))
     }
     case GET -> Root / LongVar(id) / "users" as user =>
       EventsService.getUsers(user.id, id).foldM(errorMapper,

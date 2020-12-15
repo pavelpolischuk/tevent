@@ -20,7 +20,7 @@ object SlickOrganizationsRepository {
     override val getAll: IO[RepositoryError, List[Organization]] =
       io(table.all).flatMap(
         ZIO.foreach(_)(org => io(tags.withId(org.id)).map(t =>
-          Organization(org.id, org.name, t.toList)
+          Organization(org.id, org.name, org.nick, org.description, t.toList)
         )).map(_.toList)
       ).refineRepositoryError
 
@@ -29,20 +29,20 @@ object SlickOrganizationsRepository {
         ZIO.foreach(r)(id => for {
           org <- io(table.withId(id)).someOrFail(new RuntimeException("There's not organization with id from Tags"))
           tags <- io(tags.withId(id))
-        } yield Organization(id, org.name, tags.toList)).map(_.toList)
+        } yield Organization(id, org.name, org.nick, org.description, tags.toList)).map(_.toList)
       ).refineRepositoryError
 
     override def getByUser(userId: Long): IO[RepositoryError, List[(Organization, OrgParticipationType)]] =
       io(participants.forUser(userId)).flatMap(
         ZIO.foreach(_)(org => io(tags.withId(org._1.id)).map(t =>
-          (Organization(org._1.id, org._1.name, t.toList), org._2)
+          (Organization(org._1.id, org._1.name, org._1.nick, org._1.description, t.toList), org._2)
         )).map(_.toList)
       ).refineRepositoryError
 
     override def getById(id: Long): IO[RepositoryError, Option[Organization]] =
       io(table.withId(id)).flatMap {
         case None => IO.none
-        case Some(org) => io(tags.withId(org.id)).map(t => Organization(org.id, org.name, t.toList)).option
+        case Some(org) => io(tags.withId(org.id)).map(t => Organization(org.id, org.name, org.nick, org.description, t.toList)).option
       }.refineRepositoryError
 
     override def update(organization: Organization): IO[RepositoryError, Unit] =
@@ -75,7 +75,7 @@ object SlickOrganizationsRepository {
     override def getRequestsForUser(userId: Long): IO[RepositoryError, List[(Organization, OrgParticipationType, User)]] =
       io(requests.forUser(userId)).flatMap(
         ZIO.foreach(_)(req => io(tags.withId(req._1.id)).map(t =>
-          (Organization(req._1.id, req._1.name, t.toList), req._2, req._3)
+          (Organization(req._1.id, req._1.name, req._1.nick, req._1.description, t.toList), req._2, req._3)
         )).map(_.toList)
       ).refineRepositoryError
 

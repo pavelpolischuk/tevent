@@ -10,7 +10,7 @@ object OrganizationsService {
     def get(id: Long): IO[DomainError, Option[Organization]]
     def search(filter: OrganizationFilter): IO[DomainError, List[Organization]]
     def update(userId: Long, organization: Organization): IO[DomainError, Unit]
-    def create(userId: Long, name: String, tags: List[String]): IO[DomainError, Organization]
+    def create(userId: Long, organization: Organization): IO[DomainError, Organization]
   }
 
   class OrganizationsServiceImpl(organizations: OrganizationsRepository.Service, participation: ParticipationService.Service) extends OrganizationsService.Service {
@@ -26,11 +26,10 @@ object OrganizationsService {
       _ <- organizations.update(organization)
     } yield ()
 
-    override def create(userId: Long, name: String, tags: List[String]): IO[DomainError, Organization] = for {
-      org <- IO.succeed(Organization(-1, name, tags))
-      orgId <- organizations.add(org)
+    override def create(userId: Long, organization: Organization): IO[DomainError, Organization] = for {
+      orgId <- organizations.add(organization)
       _ <- organizations.addUser(OrgParticipation(userId, orgId, OrgOwner))
-    } yield org.copy(orgId)
+    } yield organization.copy(id = orgId)
   }
 
   def live: URLayer[OrganizationsRepository with ParticipationService, OrganizationsService] =
@@ -47,6 +46,6 @@ object OrganizationsService {
   def update(userId: Long, organization: Organization): ZIO[OrganizationsService, DomainError, Unit] =
     ZIO.accessM(_.get.update(userId, organization))
 
-  def create(userId: Long, name: String, tags: List[String]): ZIO[OrganizationsService, DomainError, Organization] =
-    ZIO.accessM(_.get.create(userId, name, tags))
+  def create(userId: Long, organization: Organization): ZIO[OrganizationsService, DomainError, Organization] =
+    ZIO.accessM(_.get.create(userId, organization))
 }

@@ -70,8 +70,8 @@ object OrganizationsEndpointTest extends DefaultRunnableSpec {
 
   private val user = User(1, "Paul", "paul@g.com", "1234", 0)
   private val userId = UserId(user.id, user.name)
-  private val organization = Organization(1, "Paul Corp.", List("scala", "dev"))
-  private val organizationForm = OrganizationForm(organization.name, organization.tags)
+  private val organization = Organization(1, "Paul Corp.", "pcorp", "Description", List("scala", "dev"))
+  private val organizationForm = OrganizationForm(organization.name, organization.nick, organization.description, organization.tags)
 
   private val subscribeRequestForm = OrgParticipationForm(OrgSubscriber)
   private val memberRequestForm = OrgParticipationForm(OrgManager)

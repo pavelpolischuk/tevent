@@ -159,8 +159,8 @@ object TEventIntegrationTest extends DefaultRunnableSpec {
   private val user2Login = LoginForm(Some(user2.name), user2.email, user2.secretHash)
   private val user2Id = UserId(user2.id, user2.name)
 
-  private val organization = Organization(1, "Paul Corp.", List("scala", "dev"))
-  private val organizationForm = OrganizationForm(organization.name, organization.tags)
+  private val organization = Organization(1, "Paul Corp.", "pcorp", "Paul Description", List("scala", "dev"))
+  private val organizationForm = OrganizationForm(organization.name, organization.nick, organization.description, organization.tags)
 
   private val ownerParticipation = OrgUserParticipationData(userId, OrgOwner)
   private val memberRequestForm = OrgParticipationForm(OrgManager)
@@ -168,8 +168,8 @@ object TEventIntegrationTest extends DefaultRunnableSpec {
   private val memberApprove = OrgParticipationApprove(user2.id)
   private val memberParticipation = OrgUserParticipationData(user2Id, memberRequestForm.participationType)
 
-  private val event = Event(1, organization.id, "Paul Meetup #1", ZonedDateTime.now(), Some("Moscow"), Some(1), None)
-  private val eventForm = EventForm(event.id, event.name, event.datetime, event.location, event.capacity, event.videoBroadcastLink)
+  private val event = Event(1, organization.id, "Paul Meetup #1", "Meetup Description", ZonedDateTime.now(), Some("Moscow"), Some(1), None)
+  private val eventForm = EventForm(event.id, event.name, event.description, event.datetime, event.location, event.capacity, event.videoBroadcastLink)
 
   private val offlineJoin = EventParticipationForm(OfflineParticipant)
   private val offlineParticipation = EventParticipationData(event, offlineJoin.participationType)

@@ -13,6 +13,7 @@ class EventsTable(val organizations: OrganizationsTable)(implicit val profile: J
     def id: Rep[Long] = column("ID", O.PrimaryKey, O.AutoInc)
     def organizationId: Rep[Long] = column("ORGANIZATION_ID")
     def name: Rep[String] = column("NAME")
+    def description: Rep[String] = column("DESCRIPTION")
     def datetime: Rep[ZonedDateTime] = column("DATETIME")
     def location: Rep[Option[String]] = column("LOCATION", Nullable)
     def capacity: Rep[Option[Int]] = column("CAPACITY", Nullable)
@@ -20,7 +21,7 @@ class EventsTable(val organizations: OrganizationsTable)(implicit val profile: J
 
     def organization = foreignKey("EVENT_ORGANIZATION_FK", organizationId, organizations.All)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
 
-    override def * : ProvenShape[Event] = (id, organizationId, name, datetime, location, capacity, broadcastLink).<>(Event.mapperTo, Event.unapply)
+    override def * : ProvenShape[Event] = (id, organizationId, name, description, datetime, location, capacity, broadcastLink).<>(Event.mapperTo, Event.unapply)
   }
 
   val All = TableQuery[Events]
@@ -28,8 +29,8 @@ class EventsTable(val organizations: OrganizationsTable)(implicit val profile: J
   def all: DBIO[Seq[Event]] = All.result
 
   def add(event: Event): DBIO[Long] =
-    (All.map(e => (e.organizationId, e.name, e.datetime, e.location, e.capacity, e.broadcastLink)) returning All.map(_.id)) +=
-      (event.organizationId, event.name, event.datetime, event.location, event.capacity, event.videoBroadcastLink)
+    (All.map(e => (e.organizationId, e.name, e.description, e.datetime, e.location, e.capacity, e.broadcastLink)) returning All.map(_.id)) +=
+      (event.organizationId, event.name, event.description, event.datetime, event.location, event.capacity, event.videoBroadcastLink)
 
   def withId(id: Long): DBIO[Option[Event]] = All.filter(_.id === id).result.headOption
 
@@ -41,7 +42,7 @@ class EventsTable(val organizations: OrganizationsTable)(implicit val profile: J
       .result
 
   def update(event: Event): DBIO[Int] = {
-    val q = for { c <- All if c.id === event.id } yield (c.name, c.datetime, c.location, c.capacity, c.broadcastLink)
-    q.update((event.name, event.datetime, event.location, event.capacity, event.videoBroadcastLink))
+    val q = for { c <- All if c.id === event.id } yield (c.name, c.description, c.datetime, c.location, c.capacity, c.broadcastLink)
+    q.update((event.name, event.description, event.datetime, event.location, event.capacity, event.videoBroadcastLink))
   }
 }

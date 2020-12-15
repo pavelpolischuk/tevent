@@ -5,6 +5,8 @@ import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
 
 case class Organization(id: Long,
                         name: String,
+                        nick: String,
+                        description: String,
                         tags: List[String])
 
 object Organization {

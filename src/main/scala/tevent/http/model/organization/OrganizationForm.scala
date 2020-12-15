@@ -3,7 +3,7 @@ package tevent.http.model.organization
 import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
 import io.circe.{Decoder, Encoder}
 
-case class OrganizationForm(name: String, tags: List[String])
+case class OrganizationForm(name: String, nick: String, description: String, tags: List[String])
 
 object OrganizationForm {
   implicit val orgFormEncoder: Encoder[OrganizationForm] = deriveEncoder[OrganizationForm]

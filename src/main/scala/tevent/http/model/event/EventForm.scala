@@ -7,6 +7,7 @@ import java.time.ZonedDateTime
 
 case class EventForm(organizationId: Long,
                      name: String,
+                     nick: String,
                      datetime: ZonedDateTime,
                      location: Option[String],
                      capacity: Option[Int],

@@ -92,9 +92,8 @@ object EventsService {
   def update(userId: Long, event: Event): ZIO[EventsService, DomainError, Unit] =
     ZIO.accessM(_.get.update(userId, event))
 
-  def create(userId: Long, organizationId: Long, name: String, datetime: ZonedDateTime, location: Option[String],
-             capacity: Option[Int], videoBroadcastLink: Option[String]): ZIO[EventsService, DomainError, Event] =
-    ZIO.accessM(_.get.create(userId, Event(-1, organizationId, name, datetime, location, capacity, videoBroadcastLink)))
+  def create(userId: Long, event: Event): ZIO[EventsService, DomainError, Event] =
+    ZIO.accessM(_.get.create(userId, event))
 
   def joinEvent(participation: EventParticipation): ZIO[EventsService, DomainError, Unit] =
     ZIO.accessM(_.get.joinEvent(participation))

@@ -21,9 +21,9 @@ class InMemoryOrganizationsService(ref: Ref[Map[Long, Organization]], counter: R
       }
     } yield result
 
-  override def create(userId: Long, name: String, tags: List[String]): IO[DomainError, Organization] = for {
+  override def create(userId: Long, organization: Organization): IO[DomainError, Organization] = for {
     newId <- counter.updateAndGet(_ + 1)
-    org   = Organization(newId, name, tags)
+    org   = organization.copy(id = newId)
     _     <- ref.update(store => store + (newId -> org))
   } yield org
 
