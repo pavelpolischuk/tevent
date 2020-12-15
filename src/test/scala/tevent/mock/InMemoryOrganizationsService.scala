@@ -1,13 +1,13 @@
 package tevent.mock
 
-import tevent.domain.Named.organizationNamed
-import tevent.domain.{DomainError, EntityNotFound}
-import tevent.domain.model.{Organization, OrganizationFilter}
-import tevent.service.OrganizationsService
+import tevent.core.{DomainError, EntityNotFound}
+import tevent.events.model.Event.EventEntity
+import tevent.organizations.model.{Organization, OrganizationFilter}
+import tevent.organizations.service.Organizations
 import zio._
 
 class InMemoryOrganizationsService(ref: Ref[Map[Long, Organization]], counter: Ref[Long])
-  extends OrganizationsService.Service {
+  extends Organizations.Service {
 
   override def get(id: Long): IO[DomainError, Option[Organization]] =
     ref.get.map(_.get(id))
@@ -33,7 +33,7 @@ class InMemoryOrganizationsService(ref: Ref[Map[Long, Organization]], counter: R
 }
 
 object InMemoryOrganizationsService {
-  def layer: ULayer[OrganizationsService] = (for {
+  def layer: ULayer[Organizations] = (for {
     ref <- Ref.make(Map.empty[Long, Organization])
     counter <- Ref.make(0L)
   } yield new InMemoryOrganizationsService(ref, counter)).toLayer

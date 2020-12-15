@@ -1,9 +1,8 @@
 package tevent.notification
 
-import tevent.http.model.organization.{OrgParticipationRequest => _}
-import tevent.infrastructure.Configuration.GmailConfig
-import tevent.infrastructure.service.EmailSender.GmailSender
-import tevent.infrastructure.service.{Email, EmailSender}
+import tevent.organizations.dto.{OrgParticipationRequest => _}
+import tevent.core.Config.GmailConfig
+import Email.GmailSender
 import zio.test.TestAspect.ignore
 import zio.test.environment.TestEnvironment
 import zio.test.{assertCompletes, _}
@@ -15,7 +14,7 @@ object GmailTest extends DefaultRunnableSpec {
 
     testM("send test email") {
       for {
-        _ <- EmailSender.sendMail(testReceiver, "Test email", "This is test email from TEvent.")
+        _ <- Email.sendMail(testReceiver, "Test email", "This is test email from TEvent.")
       } yield assertCompletes
     }
 

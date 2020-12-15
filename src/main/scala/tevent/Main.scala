@@ -1,7 +1,7 @@
 package tevent
 
-import tevent.http.Server
-import tevent.infrastructure.Environments.appEnvironment
+import tevent.main.Environments.appEnvironment
+import tevent.main.Server
 import zio._
 
 object Main extends App {

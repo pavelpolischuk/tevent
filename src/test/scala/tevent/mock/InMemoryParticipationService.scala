@@ -1,15 +1,16 @@
 package tevent.mock
 
-import tevent.domain.Named.organizationNamed
-import tevent.domain.model.{OrgManager, OrgParticipation, OrgParticipationType, Organization, User}
-import tevent.domain.{AccessError, DomainError, EntityNotFound}
-import tevent.service.{OrganizationsService, ParticipationService}
+import tevent.core.{AccessError, DomainError, EntityNotFound}
+import tevent.events.model.Event.EventEntity
+import tevent.organizations.model.{OrgManager, OrgParticipation, OrgParticipationType, Organization}
+import tevent.organizations.service.OrganizationParticipants
+import tevent.user.model.User
 import zio._
 
 class InMemoryParticipationService(user: User, organization: Organization,
                                    participations: Ref[List[(User, Organization, OrgParticipationType)]],
                                    requests: Ref[List[(User, Organization, OrgParticipationType, Option[User])]])
-  extends ParticipationService.Service {
+  extends OrganizationParticipants.Service {
 
   override def checkUser(userId: Long, organizationId: Long, role: OrgParticipationType): IO[DomainError, Unit] =
     participations.get.filterOrFail(
@@ -55,7 +56,7 @@ class InMemoryParticipationService(user: User, organization: Organization,
 object InMemoryParticipationService {
   def layer(user: User, organization: Organization,
             participants: List[(User, Organization, OrgParticipationType)] = List.empty,
-            requests: List[(User, Organization, OrgParticipationType, Option[User])] = List.empty): ULayer[ParticipationService] = (for {
+            requests: List[(User, Organization, OrgParticipationType, Option[User])] = List.empty): ULayer[OrganizationParticipants] = (for {
     ref <- Ref.make(participants)
     req <- Ref.make(requests)
   } yield new InMemoryParticipationService(user, organization, ref, req)).toLayer

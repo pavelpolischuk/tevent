@@ -1,11 +1,14 @@
 package tevent
 
-import tevent.domain.model.{Event, EventSubscriber, OfflineParticipant, OrgManager, OrgOwner, OrgSubscriber, Organization, User}
-import tevent.http.Server
-import tevent.http.model.event.{EventForm, EventParticipationData, EventParticipationForm, EventUserParticipationData}
-import tevent.http.model.organization.{OrgParticipationApprove, OrgParticipationData, OrgParticipationForm, OrgParticipationRequest, OrgUserParticipationData, OrganizationForm}
-import tevent.http.model.user.{LoginData, LoginForm, UserData, UserId}
-import tevent.infrastructure.Environments.testEnvironment
+import tevent.organizations.model.{OrgManager, OrgOwner, OrgSubscriber, Organization}
+import tevent.events.dto.{EventForm, EventParticipationData, EventParticipationForm, EventUserParticipationData}
+import tevent.organizations.dto.{OrgParticipationApprove, OrgParticipationData, OrgParticipationForm, OrgParticipationRequest, OrgUserParticipationData, OrganizationForm}
+import tevent.main.Environments.testEnvironment
+import tevent.events.model.{Event, EventSubscriber, OfflineParticipant}
+import tevent.helpers.HttpClient
+import tevent.main.Server
+import tevent.user.dto.{LoginData, LoginForm, UserData, UserId}
+import tevent.user.model.User
 import zio.console.Console
 import zio.{ExitCode, Fiber, Has, ZLayer}
 import zio.test.Assertion.{equalTo, hasSameElements, isEmpty, isTrue}

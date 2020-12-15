@@ -1,8 +1,9 @@
 package tevent.mock
 
-import tevent.domain.RepositoryError
-import tevent.domain.model._
-import tevent.domain.repository.OrganizationsRepository
+import tevent.core.RepositoryError
+import tevent.organizations.model._
+import tevent.organizations.repository.OrganizationsRepository
+import tevent.user.model.User
 import zio._
 
 class InMemoryOrganizationsRepository(ref: Ref[Map[Long, Organization]],

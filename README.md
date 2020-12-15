@@ -11,9 +11,9 @@
 
 ### Технологии
 - Язык `Scala`
-- Web-server `http4s`
+- Web `http4s`, `circe`
 - DB `slick` + `h2` | `postgres`
-- Tasks, tests `ZIO`
+- Effects, tests `ZIO`
 - Hosting `heroku`
 - Emails `gmail-smtp`
 

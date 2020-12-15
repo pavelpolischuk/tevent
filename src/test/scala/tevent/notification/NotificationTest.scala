@@ -1,9 +1,10 @@
 package tevent.notification
 
-import tevent.domain.model.{Event, OrgParticipationType, OrgSubscriber, Organization, User}
-import tevent.http.model.organization.{OrgParticipationRequest => _}
+import tevent.organizations.model.{OrgParticipationType, OrgSubscriber, Organization}
+import tevent.events.model.Event
+import tevent.organizations.dto.{OrgParticipationRequest => _}
 import tevent.mock.{InMemoryEmailSender, InMemoryOrganizationsRepository}
-import tevent.service.NotificationService
+import tevent.user.model.User
 import zio.Ref
 import zio.test.Assertion.hasSameElements
 import zio.test._
@@ -23,9 +24,9 @@ object NotificationTest extends DefaultRunnableSpec {
 
         sender = InMemoryEmailSender.layer(receivers)
         orgRepo = InMemoryOrganizationsRepository.layer(org, participants)
-        notifier = (orgRepo ++ sender) >>> NotificationService.live
+        notifier = (orgRepo ++ sender) >>> Notification.live
 
-        _ <- NotificationService.notifyNewEvent(organization, event, users).provideSomeLayer(notifier)
+        _ <- Notification.notifyNewEvent(organization, event, users).provideSomeLayer(notifier)
         receivers <- receivers.get
       } yield assert(receivers)(hasSameElements(users.map(_.email)))
     },
@@ -38,9 +39,9 @@ object NotificationTest extends DefaultRunnableSpec {
 
         sender = InMemoryEmailSender.layer(receivers)
         orgRepo = InMemoryOrganizationsRepository.layer(org, participants)
-        notifier = (orgRepo ++ sender) >>> NotificationService.live
+        notifier = (orgRepo ++ sender) >>> Notification.live
 
-        _ <- NotificationService.notifySubscribers(event).provideSomeLayer(notifier)
+        _ <- Notification.notifySubscribers(event).provideSomeLayer(notifier)
         receivers <- receivers.get
       } yield assert(receivers)(hasSameElements(users.map(_.email)))
     }
