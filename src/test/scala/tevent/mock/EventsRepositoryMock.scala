@@ -1,7 +1,6 @@
 package tevent.mock
 
 import tevent.core.RepositoryError
-import tevent.organizations.model._
 import tevent.events.model.{Event, EventFilter, EventParticipation, EventParticipationType}
 import tevent.events.repository.EventsRepository
 import tevent.user.model.User

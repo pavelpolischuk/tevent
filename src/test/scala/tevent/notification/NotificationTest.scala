@@ -1,12 +1,13 @@
 package tevent.notification
 
-import tevent.organizations.model.{OrgParticipationType, OrgSubscriber, Organization}
 import tevent.events.model.Event
+import tevent.helpers.TestHelper.mappedAssert
+import tevent.mock.{EmailMock, InMemoryOrganizationsRepository}
 import tevent.organizations.dto.{OrgParticipationRequest => _}
-import tevent.mock.{InMemoryEmailSender, InMemoryOrganizationsRepository}
+import tevent.organizations.model.{OrgParticipationType, OrgSubscriber, Organization}
 import tevent.user.model.User
 import zio.Ref
-import zio.test.Assertion.hasSameElements
+import zio.test.Assertion.equalTo
 import zio.test._
 import zio.test.environment.TestEnvironment
 
@@ -17,33 +18,32 @@ object NotificationTest extends DefaultRunnableSpec {
   override def spec: ZSpec[TestEnvironment, Any] = suite("NotificationService")(
 
     testM("send emails to all receivers") {
-      for {
-        receivers <- Ref.make(List.empty[String])
-        org <- Ref.make(Map.empty[Long, Organization])
-        participants <- Ref.make(Map.empty[Long, List[(User, OrgParticipationType)]])
+      val sender = users.foldRight(EmailMock.Empty)((u, e) =>
+        EmailMock.SendMail(mappedAssert[(String, String, String), String](_._1, equalTo(u.email))) ++ e)
 
-        sender = InMemoryEmailSender.layer(receivers)
+      for {
+        participants <- Ref.make(Map.empty[Long, List[(User, OrgParticipationType)]])
+        org <- Ref.make(Map.empty[Long, Organization])
         orgRepo = InMemoryOrganizationsRepository.layer(org, participants)
         notifier = (orgRepo ++ sender) >>> Notification.live
 
         _ <- Notification.notifyNewEvent(organization, event, users).provideSomeLayer(notifier)
-        receivers <- receivers.get
-      } yield assert(receivers)(hasSameElements(users.map(_.email)))
+      } yield assertCompletes
     },
 
     testM("send emails to all subscribers of organization") {
+      val sender = users.foldRight(EmailMock.Empty)((u, e) =>
+        EmailMock.SendMail(mappedAssert[(String, String, String), String](_._1, equalTo(u.email))) ++ e)
+
       for {
-        receivers <- Ref.make(List.empty[String])
         org <- Ref.make(Map(organization.id -> organization))
         participants <- Ref.make(Map[Long, List[(User, OrgParticipationType)]](organization.id -> users.map((_, OrgSubscriber))))
 
-        sender = InMemoryEmailSender.layer(receivers)
         orgRepo = InMemoryOrganizationsRepository.layer(org, participants)
         notifier = (orgRepo ++ sender) >>> Notification.live
 
         _ <- Notification.notifySubscribers(event).provideSomeLayer(notifier)
-        receivers <- receivers.get
-      } yield assert(receivers)(hasSameElements(users.map(_.email)))
+      } yield assertCompletes
     }
 
   )
