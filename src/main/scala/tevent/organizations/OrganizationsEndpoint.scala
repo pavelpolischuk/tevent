@@ -22,7 +22,7 @@ final class OrganizationsEndpoint[R <: Organizations with OrganizationParticipan
 
   private val httpRoutes = HttpRoutes.of[Task] {
     case GET -> Root / LongVar(id) =>
-      Organizations.get(id).foldM(errorResponse, _.fold(NotFound())(Ok(_)))
+      Organizations.get(id).foldM(errorResponse, Ok(_))
 
     case GET -> Root
       :? OptionalTagsQueryParamMatcher(tags) => tags.map(_.toEither) match {
@@ -56,7 +56,7 @@ final class OrganizationsEndpoint[R <: Organizations with OrganizationParticipan
       OrganizationParticipants.inviteIntoOrganization(invite, user.id).foldM(errorResponse, Ok(_))
     }
     case request@POST -> Root / LongVar(id) / "approve" as user => request.req.decode[OrgParticipationApprove] { form =>
-      OrganizationParticipants.approveRequestIntoOrganization(form.userId, id, user.id).foldM(errorResponse, Ok(_))
+      OrganizationParticipants.approveRequest(form.userId, id, user.id).foldM(errorResponse, Ok(_))
     }
     case POST -> Root / LongVar(id) / "leave" as user =>
       OrganizationParticipants.leaveOrganization(user.id, id).foldM(errorResponse, Ok(_))

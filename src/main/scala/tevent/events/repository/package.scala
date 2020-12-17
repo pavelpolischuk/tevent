@@ -8,4 +8,5 @@ package object repository {
   type EventParticipantsT = Has[EventParticipantsTable]
 
   type EventsRepository = Has[EventsRepository.Service]
+  type EventParticipantsRepository = Has[EventParticipantsRepository.Service]
 }

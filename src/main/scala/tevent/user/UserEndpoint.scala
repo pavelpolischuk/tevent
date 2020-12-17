@@ -8,14 +8,14 @@ import tevent.core.ErrorMapper.errorResponse
 import tevent.events.dto.EventParticipationData
 import tevent.events.service.Events
 import tevent.organizations.dto.{OrgParticipationData, OwnOrgParticipationRequest}
-import tevent.organizations.service.OrganizationParticipants
+import tevent.organizations.service.{OrganizationParticipants, Organizations}
 import tevent.user.dto.{LoginData, SecretForm, UserData}
 import tevent.user.model.User
 import tevent.user.service.{Auth, Users}
 import zio._
 import zio.interop.catz.taskConcurrentInstance
 
-final class UserEndpoint[R <: Users with Auth with OrganizationParticipants with Events] {
+final class UserEndpoint[R <: Users with Auth with Organizations with OrganizationParticipants with Events] {
   type Task[A] = RIO[R, A]
 
   private val dsl = Http4sDsl[Task]
@@ -39,7 +39,7 @@ final class UserEndpoint[R <: Users with Auth with OrganizationParticipants with
       Events.getByUser(user.id).foldM(errorResponse,
         p => Ok(p.map(EventParticipationData.mapperTo)))
     case GET -> Root / "organizations" as user =>
-      OrganizationParticipants.getOrganizations(user.id).foldM(errorResponse,
+      Organizations.getByUser(user.id).foldM(errorResponse,
         p => Ok(p.map(OrgParticipationData.mapperTo)))
     case GET -> Root / "requests" as user =>
       OrganizationParticipants.getOwnRequests(user.id).foldM(errorResponse,

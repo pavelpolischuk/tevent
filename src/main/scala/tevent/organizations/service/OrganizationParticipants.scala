@@ -1,9 +1,9 @@
 package tevent.organizations.service
 
-import tevent.core.{AccessError, DomainError, EntityNotFound, ValidationError}
 import tevent.core.EntityNotFound.noneToNotFound
+import tevent.core.{AccessError, DomainError, ValidationError}
 import tevent.organizations.model._
-import tevent.organizations.repository.OrganizationsRepository
+import tevent.organizations.repository.{OrganizationParticipantsRepository, OrganizationRequestsRepository}
 import tevent.user.model.User
 import zio.{IO, URLayer, ZIO, ZLayer}
 
@@ -11,85 +11,81 @@ object OrganizationParticipants {
   trait Service {
     def checkUser(userId: Long, organizationId: Long, role: OrgParticipationType): IO[DomainError, Unit]
     def getUsers(userId: Long, organizationId: Long): IO[DomainError, List[(User, OrgParticipationType)]]
-
-    def getOrganizations(userId: Long): IO[DomainError, List[(Organization, OrgParticipationType)]]
     def getRequests(userId: Long, organizationId: Long): IO[DomainError, List[(User, OrgParticipationType, User)]]
     def getOwnRequests(userId: Long): IO[DomainError, List[(Organization, OrgParticipationType, Option[User])]]
 
     def joinOrganization(participation: OrgParticipation): IO[DomainError, Unit]
     def inviteIntoOrganization(participation: OrgParticipation, inviterId: Long): IO[DomainError, Unit]
-    def approveRequestIntoOrganization(userId: Long, organizationId: Long, approverId: Long): IO[DomainError, Unit]
+    def approveRequest(userId: Long, organizationId: Long, approverId: Long): IO[DomainError, Unit]
     def leaveOrganization(userId: Long, organizationId: Long): IO[DomainError, Unit]
   }
 
-  class ParticipationServiceImpl(organizations: OrganizationsRepository.Service) extends OrganizationParticipants.Service {
+  class OrganizationParticipantsImpl(participants: OrganizationParticipantsRepository.Service,
+                                     requests: OrganizationRequestsRepository.Service) extends OrganizationParticipants.Service {
+
     override def checkUser(userId: Long, organizationId: Long, role: OrgParticipationType): IO[DomainError, Unit] =
-      organizations.checkUser(userId, organizationId).flatMap {
-        case None => IO.fail(EntityNotFound[Organization, Long](organizationId))
+      participants.check(userId, organizationId).flatMap {
         case Some(v) if v >= role => IO.unit
         case _ => IO.fail(AccessError)
       }
 
     override def getUsers(userId: Long, organizationId: Long): IO[DomainError, List[(User, OrgParticipationType)]] = for {
       _ <- checkUser(userId, organizationId, OrgMember)
-      req <- organizations.getUsers(organizationId)
+      req <- participants.getParticipants(organizationId)
     } yield req
 
-    override def getOrganizations(userId: Long): IO[DomainError, List[(Organization, OrgParticipationType)]] =
-      organizations.getByUser(userId)
 
     override def getRequests(userId: Long, organizationId: Long): IO[DomainError, List[(User, OrgParticipationType, User)]] = for {
       _ <- checkUser(userId, organizationId, OrgManager)
-      req <- organizations.getRequests(organizationId)
+      req <- requests.getForOrganization(organizationId)
     } yield req
 
     override def getOwnRequests(userId: Long): IO[DomainError, List[(Organization, OrgParticipationType, Option[User])]] =
-      organizations.getRequestsForUser(userId).map(_.map(r => (r._1, r._2, Option.when(userId != r._3.id)(r._3))))
+      requests.getForUser(userId).map(_.map(r => (r._1, r._2, Option.when(userId != r._3.id)(r._3))))
 
 
     override def joinOrganization(participation: OrgParticipation): IO[DomainError, Unit] =
       if (participation.participationType >= OrgManager)
-        organizations.getRequest(participation.userId, participation.organizationId).flatMap {
+        requests.get(participation.userId, participation.organizationId).flatMap {
           case Some(approved)
             if approved.fromUserId != participation.userId && approved.participationType >= participation.participationType =>
-            organizations.addUser(participation).andThen(
-              organizations.removeRequest(approved.userId, approved.organizationId))
+            participants.add(participation).andThen(
+              requests.remove(approved.userId, approved.organizationId))
 
-          case _ => organizations.addRequest(OrgParticipationRequest(participation))
+          case _ => requests.add(OrgParticipationRequest(participation))
         }
-      else organizations.addUser(participation).andThen(
-        organizations.removeRequest(participation.userId, participation.organizationId))
+      else participants.add(participation).andThen(
+        requests.remove(participation.userId, participation.organizationId))
 
     override def inviteIntoOrganization(participation: OrgParticipation, inviterId: Long): IO[DomainError, Unit] = for {
       _ <- checkUser(inviterId, participation.organizationId, participation.participationType)
-      _ <- organizations.addRequest(OrgParticipationRequest(participation, inviterId))
+      _ <- requests.add(OrgParticipationRequest(participation, inviterId))
     } yield ()
 
-    override def approveRequestIntoOrganization(userId: Long, organizationId: Long, approverId: Long): IO[DomainError, Unit] = for {
-      request <- organizations.getRequest(userId, organizationId)
+    override def approveRequest(userId: Long, organizationId: Long, approverId: Long): IO[DomainError, Unit] = for {
+      request <- requests.get(userId, organizationId)
         .flatMap(noneToNotFound((userId, organizationId)))
         .filterOrFail(_.fromUserId == userId)(ValidationError("Request not from user"))
       needApproverRole = if (request.participationType >= OrgManager) request.participationType else OrgManager
       _ <- checkUser(approverId, organizationId, needApproverRole)
-      _ <- organizations.removeRequest(userId, organizationId)
-      _ <- organizations.addUser(request.toParticipation)
+      _ <- requests.remove(userId, organizationId)
+      _ <- participants.add(request.toParticipation)
     } yield ()
 
     override def leaveOrganization(userId: Long, organizationId: Long): IO[DomainError, Unit] =
-      organizations.removeRequest(userId, organizationId).andThen(
-        organizations.removeUser(userId, organizationId)
+      requests.remove(userId, organizationId).andThen(
+        participants.remove(userId, organizationId)
       )
   }
 
-  def live: URLayer[OrganizationsRepository, OrganizationParticipants] =
-    ZLayer.fromService[OrganizationsRepository.Service, OrganizationParticipants.Service](new ParticipationServiceImpl(_))
+
+  def live: URLayer[OrganizationParticipantsRepository with OrganizationRequestsRepository, OrganizationParticipants] =
+    ZLayer.fromServices[OrganizationParticipantsRepository.Service, OrganizationRequestsRepository.Service, OrganizationParticipants.Service](
+      new OrganizationParticipantsImpl(_, _))
 
 
   def getUsers(userId: Long, organizationId: Long): ZIO[OrganizationParticipants, DomainError, List[(User, OrgParticipationType)]] =
     ZIO.accessM(_.get.getUsers(userId, organizationId))
-
-  def getOrganizations(userId: Long): ZIO[OrganizationParticipants, DomainError, List[(Organization, OrgParticipationType)]] =
-    ZIO.accessM(_.get.getOrganizations(userId))
 
   def getRequests(userId: Long, organizationId: Long): ZIO[OrganizationParticipants, DomainError, List[(User, OrgParticipationType, User)]] =
     ZIO.accessM(_.get.getRequests(userId, organizationId))
@@ -104,8 +100,8 @@ object OrganizationParticipants {
   def inviteIntoOrganization(participation: OrgParticipation, inviterId: Long): ZIO[OrganizationParticipants, DomainError, Unit] =
     ZIO.accessM(_.get.inviteIntoOrganization(participation, inviterId))
 
-  def approveRequestIntoOrganization(userId: Long, organizationId: Long, approverId: Long): ZIO[OrganizationParticipants, DomainError, Unit] =
-    ZIO.accessM(_.get.approveRequestIntoOrganization(userId, organizationId, approverId))
+  def approveRequest(userId: Long, organizationId: Long, approverId: Long): ZIO[OrganizationParticipants, DomainError, Unit] =
+    ZIO.accessM(_.get.approveRequest(userId, organizationId, approverId))
 
   def leaveOrganization(userId: Long, organizationId: Long): ZIO[OrganizationParticipants, DomainError, Unit] =
     ZIO.accessM(_.get.leaveOrganization(userId, organizationId))

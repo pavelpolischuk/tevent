@@ -10,4 +10,6 @@ package object repository {
   type OrganizationTagsT = Has[OrganizationTagsTable]
 
   type OrganizationsRepository = Has[OrganizationsRepository.Service]
+  type OrganizationParticipantsRepository = Has[OrganizationParticipantsRepository.Service]
+  type OrganizationRequestsRepository = Has[OrganizationRequestsRepository.Service]
 }

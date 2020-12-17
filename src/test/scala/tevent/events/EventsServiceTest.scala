@@ -1,64 +1,63 @@
 package tevent.events
 
-import tevent.core.{AccessError, ValidationError}
+import tevent.core.{AccessError, DomainError, ValidationError}
 import tevent.events.model.{Event, EventParticipation, OfflineParticipant, OnlineParticipant}
-import tevent.events.service.Events
-import tevent.mock.{EventsRepositoryMock, InMemoryParticipationService, NotificationServiceMock}
+import tevent.events.service.{EventParticipants, Events}
+import tevent.mock.{EventParticipantsRepositoryMock, EventsRepositoryMock, NotificationServiceMock, OrganizationParticipantsMock}
 import tevent.organizations.model.{OrgManager, Organization}
 import tevent.user.model.User
 import zio.test.Assertion._
-import zio.test.mock.Expectation
 import zio.test._
 import zio.test.environment.TestEnvironment
+import zio.test.mock.Expectation
 
 import java.time.ZonedDateTime
 
 object EventsServiceTest extends DefaultRunnableSpec {
 
-  override def spec: ZSpec[TestEnvironment, Any] = suite("EventsService")(
+  override def spec: ZSpec[TestEnvironment, Any] = suite("Events")(
 
     testM("get event") {
       val repository = EventsRepositoryMock.GetById(equalTo(1L), Expectation.value(Some(event)))
-      val service = participations ++ notification ++ repository >>> Events.live
+      val service = repository ++ orgParticipants ++ notification >>> Events.live
       for {
         gotten <- Events.get(event.id).provideSomeLayer(service)
-      } yield assert(gotten)(isSome(equalTo(event)))
+      } yield assert(gotten)(equalTo(event))
     },
 
     testM("get none for not existing event") {
       val repository = EventsRepositoryMock.GetById(equalTo(2L), Expectation.value(None))
-      val service = participations ++ notification ++ repository >>> Events.live
-      for {
-        gotten <- Events.get(2).provideSomeLayer(service)
-      } yield assert(gotten)(isNone)
+      val service = repository ++ orgParticipants ++ notification >>> Events.live
+      val action = Events.get(2).provideSomeLayer(service).run
+      assertM(action)(fails(isSubtype[DomainError](anything)))
     },
 
     testM("join event if has seats") {
-      val repository =
-        EventsRepositoryMock.GetById(equalTo(event.id), Expectation.value(Some(event))) &&
-          EventsRepositoryMock.CheckUser(equalTo((user2.id, event.id)), Expectation.value(None)) &&
-          EventsRepositoryMock.GetUsers(equalTo(event.id), Expectation.value(List((user1, OnlineParticipant)))) ++
-            EventsRepositoryMock.AddUser(equalTo(participation))
-      val service = participations ++ notification ++ repository >>> Events.live
+      val events = EventsRepositoryMock.GetById(equalTo(event.id), Expectation.value(Some(event)))
+      val participants = EventParticipantsRepositoryMock.Check(equalTo((user2.id, event.id)), Expectation.value(None)) &&
+        EventParticipantsRepositoryMock.GetParticipants(equalTo(event.id), Expectation.value(List((user1, OnlineParticipant)))) ++
+        EventParticipantsRepositoryMock.Add(equalTo(participation))
+
+      val service = events ++ participants ++ orgParticipants >>> EventParticipants.live
       for {
-        _ <- Events.joinEvent(participation).provideSomeLayer(service)
+        _ <- EventParticipants.joinEvent(participation).provideSomeLayer(service)
       } yield assertCompletes
     },
 
     testM("fail join event if has not seats") {
-      val repository =
-        EventsRepositoryMock.GetUsers(equalTo(event.id), Expectation.value(List((user1, OfflineParticipant)))) &&
-          EventsRepositoryMock.GetById(equalTo(event.id), Expectation.value(Some(event))) &&
-          EventsRepositoryMock.CheckUser(equalTo((user2.id, event.id)), Expectation.value(None))
-      val service = participations ++ notification ++ repository >>> Events.live
-      val action = Events.joinEvent(participation).provideSomeLayer(service).run
+      val events = EventsRepositoryMock.GetById(equalTo(event.id), Expectation.value(Some(event)))
+      val participants = EventParticipantsRepositoryMock.GetParticipants(equalTo(event.id), Expectation.value(List((user1, OfflineParticipant)))) &&
+        EventParticipantsRepositoryMock.Check(equalTo((user2.id, event.id)), Expectation.value(None))
+      val service = events ++ participants ++ orgParticipants >>> EventParticipants.live
+      val action = EventParticipants.joinEvent(participation).provideSomeLayer(service).run
       assertM(action)(fails(isSubtype[ValidationError](anything)))
     },
 
     testM("create event and notify if has rights") {
       val repository = EventsRepositoryMock.Add(equalTo(event.copy(id = -1)), Expectation.value(1L))
       val notification = NotificationServiceMock.NotifySubscribers(equalTo(event))
-      val service = participations ++ notification ++ repository >>> Events.live
+      val participants = OrganizationParticipantsMock.CheckUser(equalTo((user1.id, event.organizationId, OrgManager)), Expectation.unit)
+      val service = participants ++ repository ++ notification >>> Events.live
       for {
         result <- Events.create(user1.id, event.copy(id = -1)).provideSomeLayer(service)
       } yield assert(result)(equalTo(event))
@@ -66,7 +65,8 @@ object EventsServiceTest extends DefaultRunnableSpec {
 
     testM("fail create event if has not rights") {
       val repository = EventsRepositoryMock.Empty
-      val service = participations ++ notification ++ repository >>> Events.live
+      val participants = OrganizationParticipantsMock.CheckUser(equalTo((user2.id, organization.id, OrgManager)), Expectation.failure(AccessError))
+      val service = participants ++ repository ++ notification >>> Events.live
       val action = Events.create(user2.id, event.copy(id = -1)).provideSomeLayer(service).run
       assertM(action)(fails(equalTo(AccessError)))
     },
@@ -80,5 +80,5 @@ object EventsServiceTest extends DefaultRunnableSpec {
   private val participation = EventParticipation(user2.id, event.id, OfflineParticipant)
 
   private val notification = NotificationServiceMock.Empty
-  private val participations = InMemoryParticipationService.layer(user1, organization, List((user1, organization, OrgManager)))
+  private val orgParticipants = OrganizationParticipantsMock.Empty
 }

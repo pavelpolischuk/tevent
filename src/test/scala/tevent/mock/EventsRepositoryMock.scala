@@ -15,12 +15,6 @@ object EventsRepositoryMock extends Mock[EventsRepository] {
   object GetById extends Effect[Long, RepositoryError, Option[Event]]
   object Update extends Effect[Event, RepositoryError, Unit]
 
-  object GetUsers extends Effect[Long, RepositoryError, List[(User, EventParticipationType)]]
-  object CheckUser extends Effect[(Long, Long), RepositoryError, Option[EventParticipationType]]
-  object AddUser extends Effect[EventParticipation, RepositoryError, Unit]
-  object UpdateUser extends Effect[EventParticipation, RepositoryError, Unit]
-  object RemoveUser extends Effect[(Long, Long), RepositoryError, Unit]
-
   private object empty extends Effect[Unit, Nothing, Unit]
 
   val Empty: Expectation[EventsRepository] = empty().optional
@@ -33,11 +27,6 @@ object EventsRepositoryMock extends Mock[EventsRepository] {
         override def getByUser(userId: Long): IO[RepositoryError, List[(Event, EventParticipationType)]] = proxy(GetByUser, userId)
         override def getById(id: Long): IO[RepositoryError, Option[Event]] = proxy(GetById, id)
         override def update(event: Event): IO[RepositoryError, Unit] = proxy(Update, event)
-        override def getUsers(eventId: Long): IO[RepositoryError, List[(User, EventParticipationType)]] = proxy(GetUsers, eventId)
-        override def checkUser(userId: Long, eventId: Long): IO[RepositoryError, Option[EventParticipationType]] = proxy(CheckUser, userId, eventId)
-        override def addUser(participation: EventParticipation): IO[RepositoryError, Unit] = proxy(AddUser, participation)
-        override def updateUser(participation: EventParticipation): IO[RepositoryError, Unit] = proxy(UpdateUser, participation)
-        override def removeUser(userId: Long, eventId: Long): IO[RepositoryError, Unit] = proxy(RemoveUser, userId, eventId)
       }
     }
   }

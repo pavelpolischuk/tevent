@@ -4,18 +4,21 @@ import io.circe.syntax.EncoderOps
 import org.http4s.circe.CirceEntityCodec.{circeEntityDecoder, circeEntityEncoder}
 import org.http4s.implicits.{http4sKleisliResponseSyntaxOptionT, http4sLiteralsSyntax}
 import org.http4s.{Method, Request, Status}
+import tevent.core.EntityNotFound
 import tevent.helpers.AlwaysAuthMiddleware
 import tevent.helpers.TestHelper.checkRequest
-import tevent.mock.{InMemoryOrganizationsService, InMemoryParticipationService}
+import tevent.mock.{OrganizationParticipantsMock, OrganizationsMock}
 import tevent.organizations.dto._
-import tevent.organizations.model.{OrgManager, OrgSubscriber, Organization}
+import tevent.organizations.model.{OrgManager, OrgParticipation, OrgSubscriber, Organization}
 import tevent.organizations.service.{OrganizationParticipants, Organizations}
 import tevent.user.dto.UserId
 import tevent.user.model.User
 import zio.RIO
 import zio.interop.catz.taskConcurrentInstance
+import zio.test.Assertion.equalTo
 import zio.test.environment.TestEnvironment
-import zio.test.{DefaultRunnableSpec, ZSpec, suite, testM}
+import zio.test.mock.Expectation
+import zio.test.{DefaultRunnableSpec, ZSpec, assert, assertM, suite, testM}
 
 object OrganizationsEndpointTest extends DefaultRunnableSpec {
   type Task[A] = RIO[Organizations with OrganizationParticipants, A]
@@ -23,51 +26,64 @@ object OrganizationsEndpointTest extends DefaultRunnableSpec {
   override def spec: ZSpec[TestEnvironment, Any] = suite("OrganizationsEndpoint")(
 
     testM("should get NotFound for organization") {
+      val organizations = OrganizationsMock.Get(equalTo(20L),
+        Expectation.failure(EntityNotFound[Organization, Long](20)))
       val req = Request[Task](Method.GET, uri"/organizations/20")
-      checkRequest(app.run(req), Status.NotFound, Option.empty[Organization])
+      app.run(req).map(result => assert(result.status)(equalTo(Status.NotFound)))
+        .provideSomeLayer(organizations ++ organizationParticipants)
     },
-    testM("should post and get organization") {
+    testM("should post organization") {
+      val organizations = OrganizationsMock.Create(equalTo((user.id, organization.copy(id = -1))), Expectation.value(organization))
       val postReq = Request[Task](Method.POST, uri"/organizations")
         .withEntity(organizationForm.asJson)
+      checkRequest(app.run(postReq), Status.Ok, Some(organization))
+        .provideSomeLayer(organizations ++ organizationParticipants)
+    },
+    testM("should get organization") {
+      val organizations = OrganizationsMock.Get(equalTo(organization.id), Expectation.value(organization))
       val getReq = Request[Task](Method.GET, uri"/organizations/1")
-      checkRequest(app.run(postReq) *> app.run(getReq), Status.Ok, Some(organization))
+      checkRequest(app.run(getReq), Status.Ok, Some(organization))
+        .provideSomeLayer(organizations ++ organizationParticipants)
     },
 
-    testM("should join and get requests") {
+    testM("should join") {
+      val organizationParticipants = OrganizationParticipantsMock.JoinOrganization(
+        equalTo(OrgParticipation(user.id, organization.id, memberRequestForm.participationType)), Expectation.unit)
       val postReq = Request[Task](Method.POST, uri"/organizations/1/join")
         .withEntity(memberRequestForm.asJson)
-      val getReq = Request[Task](Method.GET, uri"/organizations/1/requests")
-      checkRequest(app.run(postReq) *> app.run(getReq), Status.Ok, Some(List(memberRequest)))
+      app.run(postReq).map(res => assert(res.status)(equalTo(Status.Ok)))
+        .provideSomeLayer(organizationParticipants ++ organizations)
     },
-    testM("should approve and get participants") {
-      val postReq = Request[Task](Method.POST, uri"/organizations/1/join")
-        .withEntity(memberRequestForm.asJson)
+    testM("should get requests") {
+      val organizationParticipants = OrganizationParticipantsMock.GetRequests(
+        equalTo((user.id, organization.id)), Expectation.value(List((user, memberRequest.participationType, user))))
+      val getReq = Request[Task](Method.GET, uri"/organizations/1/requests")
+      checkRequest(app.run(getReq), Status.Ok, Some(List(memberRequest)))
+        .provideSomeLayer(organizationParticipants ++ organizations)
+    },
+    testM("should approve participation") {
+      val organizationParticipants = OrganizationParticipantsMock.ApproveRequest(
+        equalTo((user.id, organization.id, user.id)), Expectation.unit)
       val postApproveReq = Request[Task](Method.POST, uri"/organizations/1/approve")
         .withEntity(memberApprove.asJson)
-      val getReq = Request[Task](Method.GET, uri"/organizations/1/requests")
-      val getPartReq = Request[Task](Method.GET, uri"/organizations/1/users")
-      for {
-        _ <- app.run(postReq) *> app.run(postApproveReq)
-        req <- checkRequest(app.run(getReq), Status.Ok, Some(List.empty[OrgParticipationRequest]))
-        users <- checkRequest(app.run(getPartReq), Status.Ok, Some(List(memberParticipation)))
-      } yield req && users
+      app.run(postApproveReq).map(res => assert(res.status)(equalTo(Status.Ok)))
+        .provideSomeLayer(organizationParticipants ++ organizations)
     },
-    testM("should leave and get participants") {
-      val postPartReq = Request[Task](Method.POST, uri"/organizations/1/join")
-        .withEntity(subscribeRequestForm.asJson)
-      val postReq = Request[Task](Method.POST, uri"/organizations/1/join")
-        .withEntity(memberRequestForm.asJson)
+    testM("should get participants") {
+      val organizationParticipants = OrganizationParticipantsMock.GetUsers(
+        equalTo((user.id, organization.id)), Expectation.value(List((user, memberRequest.participationType))))
+      val getPartReq = Request[Task](Method.GET, uri"/organizations/1/users")
+      checkRequest(app.run(getPartReq), Status.Ok, Some(List(memberParticipation)))
+        .provideSomeLayer(organizationParticipants ++ organizations)
+    },
+    testM("should leave") {
+      val organizationParticipants = OrganizationParticipantsMock.LeaveOrganization(
+        equalTo((user.id, organization.id)), Expectation.unit)
       val postLeaveReq = Request[Task](Method.POST, uri"/organizations/1/leave")
-      val getReq = Request[Task](Method.GET, uri"/organizations/1/requests")
-      val getPartReq = Request[Task](Method.GET, uri"/organizations/1/users")
-      for {
-        _ <- app.run(postPartReq) *> app.run(postReq) *> app.run(postLeaveReq)
-        req <- checkRequest(app.run(getReq), Status.Ok, Some(List.empty[OrgParticipationRequest]))
-        users <- checkRequest(app.run(getPartReq), Status.Ok, Some(List.empty[OrgUserParticipationData]))
-      } yield req && users
-    },
-
-  ).provideSomeLayer(InMemoryOrganizationsService.layer ++ InMemoryParticipationService.layer(user, organization))
+      app.run(postLeaveReq).map(res => assert(res.status)(equalTo(Status.Ok)))
+        .provideSomeLayer(organizationParticipants ++ organizations)
+    }
+  )
 
 
   private val user = User(1, "Paul", "paul@g.com", "1234", 0)
@@ -83,4 +99,7 @@ object OrganizationsEndpointTest extends DefaultRunnableSpec {
 
   private val endpoint = new OrganizationsEndpoint[Organizations with OrganizationParticipants]
   private val app = endpoint.routes(AlwaysAuthMiddleware(user)).orNotFound
+
+  private def organizations = OrganizationsMock.Empty
+  private def organizationParticipants = OrganizationParticipantsMock.Empty
 }

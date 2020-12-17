@@ -1,10 +1,10 @@
 package tevent.notification
 
-import tevent.core.{DomainError, EntityNotFound, ExecutionError}
-import tevent.organizations.model.Organization
+import tevent.core.{DomainError, ExecutionError}
 import tevent.events.model.Event
-import tevent.events.model.Event.EventEntity
-import tevent.organizations.repository.OrganizationsRepository
+import tevent.organizations.model.Organization
+import tevent.organizations.repository.OrganizationParticipantsRepository
+import tevent.organizations.service.Organizations
 import tevent.user.model.User
 import zio.{IO, URLayer, ZIO, ZLayer}
 
@@ -14,12 +14,13 @@ object Notification {
     def notifyNewEvent(organization: Organization, event: Event, users: List[User]): IO[DomainError, Unit]
   }
 
-  class EmailNotificationService(organizations: OrganizationsRepository.Service,
+  class EmailNotificationService(organizations: Organizations.Service,
+                                 participants: OrganizationParticipantsRepository.Service,
                                  email: Email.Service) extends Notification.Service {
 
     override def notifySubscribers(event: Event): IO[DomainError, Unit] = for {
-      organization <- organizations.getById(event.organizationId).someOrFail(EntityNotFound(event.organizationId))
-      users <- organizations.getUsers(organization.id).map(_.map(_._1))
+      organization <- organizations.get(event.organizationId)
+      users <- participants.getParticipants(organization.id).map(_.map(_._1))
       _ <- notifyNewEvent(organization, event, users)
     } yield ()
 
@@ -45,9 +46,9 @@ When: ${event.datetime}
   }
 
 
-  def live: URLayer[OrganizationsRepository with Email, Notification] =
-    ZLayer.fromServices[OrganizationsRepository.Service, Email.Service, Notification.Service](
-      new EmailNotificationService(_, _))
+  def live: URLayer[Organizations with OrganizationParticipantsRepository with Email, Notification] =
+    ZLayer.fromServices[Organizations.Service, OrganizationParticipantsRepository.Service, Email.Service, Notification.Service](
+      new EmailNotificationService(_, _, _))
 
 
   def notifySubscribers(event: Event): ZIO[Notification, DomainError, Unit] =
