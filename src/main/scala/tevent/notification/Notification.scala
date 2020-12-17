@@ -1,6 +1,6 @@
 package tevent.notification
 
-import tevent.core.{DomainError, ExecutionError}
+import tevent.core.DomainError
 import tevent.events.model.Event
 import tevent.organizations.model.Organization
 import tevent.organizations.repository.OrganizationParticipantsRepository
@@ -40,8 +40,8 @@ When: ${event.datetime}
         builder.result()
       }
 
-      ZIO.foreach(users)(u => email.sendMail(u.email, subject, body))
-        .mapError(ExecutionError).unit
+      // ToDo: Loggin errors .mapError(ExecutionError).unit
+      ZIO.foreachParN(4)(users)(u => email.sendMail(u.email, subject, body).either).unit
     }
   }
 
