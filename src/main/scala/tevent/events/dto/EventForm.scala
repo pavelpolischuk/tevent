@@ -11,7 +11,8 @@ case class EventForm(organizationId: Long,
                      datetime: ZonedDateTime,
                      location: Option[String],
                      capacity: Option[Int],
-                     videoBroadcastLink: Option[String])
+                     videoBroadcastLink: Option[String],
+                     tags: List[String])
 
 object EventForm {
   implicit val eventFormDecoder: Decoder[EventForm] = deriveDecoder[EventForm]

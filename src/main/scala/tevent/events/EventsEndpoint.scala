@@ -28,20 +28,22 @@ final class EventsEndpoint[R <: Services] {
       :? OptionalFromDateQueryParamMatcher(fromDate)
       +& OptionalToDateQueryParamMatcher(toDate)
       +& OptionalOrganizationIdQueryParamMatcher(organizationId)
-      +& OptionalLocationQueryParamMatcher(location) =>
-      (fromDate.map(_.toEither), toDate.map(_.toEither), organizationId.map(_.toEither)) match {
-        case (Some(Left(_)), _, _) => BadRequest("unable to parse argument fromDate")
-        case (_, Some(Left(_)), _) => BadRequest("unable to parse argument toDate")
-        case (_, _, Some(Left(_))) => BadRequest("unable to parse argument organization")
+      +& OptionalLocationQueryParamMatcher(location)
+      +& OptionalTagsQueryParamMatcher(tags) =>
+      (fromDate.map(_.toEither), toDate.map(_.toEither), organizationId.map(_.toEither), tags.map(_.toEither)) match {
+        case (Some(Left(_)), _, _, _) => BadRequest("unable to parse argument fromDate")
+        case (_, Some(Left(_)), _, _) => BadRequest("unable to parse argument toDate")
+        case (_, _, Some(Left(_)), _) => BadRequest("unable to parse argument organization")
+        case (_, _, _, Some(Left(_))) => BadRequest("unable to parse argument tags")
         case _ =>
-          val filter = EventFilter(organizationId.flatMap(_.toOption), fromDate.flatMap(_.toOption), toDate.flatMap(_.toOption), location)
+          val filter = EventFilter(organizationId.flatMap(_.toOption), fromDate.flatMap(_.toOption), toDate.flatMap(_.toOption), location, tags.flatMap(_.toOption).getOrElse(Array.empty))
           Events.search(filter).foldM(errorResponse, Ok(_))
       }
   }
 
   private val authedRoutes = AuthedRoutes.of[User, Task] {
     case request@POST -> Root as user => request.req.decode[EventForm] { form =>
-      val event = Event(-1, form.organizationId, form.name, form.nick, form.datetime, form.location, form.capacity, form.videoBroadcastLink)
+      val event = Event(-1, form.organizationId, form.name, form.nick, form.datetime, form.location, form.capacity, form.videoBroadcastLink, form.tags)
       Events.create(user.id, event).foldM(errorResponse, Ok(_))
     }
 

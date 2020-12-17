@@ -193,8 +193,8 @@ object TEventIntegrationTest extends DefaultRunnableSpec {
   private val memberApprove = OrgParticipationApprove(user2.id)
   private val memberParticipation = OrgUserParticipationData(user2Id, memberRequestForm.participationType)
 
-  private val event = Event(1, organization.id, "Paul Meetup #1", "Meetup Description", ZonedDateTime.now(), Some("Moscow"), Some(1), None)
-  private val eventForm = EventForm(event.id, event.name, event.description, event.datetime, event.location, event.capacity, event.videoBroadcastLink)
+  private val event = Event(1, organization.id, "Paul Meetup #1", "Meetup Description", ZonedDateTime.now(), Some("Moscow"), Some(1), None, List("dev"))
+  private val eventForm = EventForm(event.id, event.name, event.description, event.datetime, event.location, event.capacity, event.videoBroadcastLink, event.tags)
 
   private val offlineJoin = EventParticipationForm(OfflineParticipant)
   private val offlineParticipation = EventParticipationData(event, offlineJoin.participationType)

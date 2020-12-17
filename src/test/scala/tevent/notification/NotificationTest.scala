@@ -37,7 +37,7 @@ object NotificationTest extends DefaultRunnableSpec {
   )
 
   private val organization = Organization(1, "Paul Corp.", "pcorp", "Description", List("scala", "dev"))
-  private val event = Event(1, organization.id, "Paul Meetup #1", "Meetup Description", ZonedDateTime.now(), Some("Moscow"), Some(1), Some("video"))
+  private val event = Event(1, organization.id, "Paul Meetup #1", "Meetup Description", ZonedDateTime.now(), Some("Moscow"), Some(1), Some("video"), List("dev"))
   private val users = List(User(1, "N1", "e1", "", 0), User(2, "N2", "e2", "", 0))
 
   private def sender = users.foldRight(EmailMock.Empty)((u, e) =>

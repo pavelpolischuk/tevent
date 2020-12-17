@@ -20,10 +20,11 @@ class EventsTable(val organizations: OrganizationsTable)(implicit val profile: J
     def location: Rep[Option[String]] = column("LOCATION", Nullable)
     def capacity: Rep[Option[Int]] = column("CAPACITY", Nullable)
     def broadcastLink: Rep[Option[String]] = column("BROADCAST_LINK", Nullable)
+    def tags: Rep[String] = column("TAGS")
 
     def organization = foreignKey("EVENT_ORGANIZATION_FK", organizationId, organizations.All)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
 
-    override def * : ProvenShape[Event] = (id, organizationId, name, description, datetime, location, capacity, broadcastLink).<>(Event.mapperTo, Event.unapply)
+    override def * : ProvenShape[Event] = (id, organizationId, name, description, datetime, location, capacity, broadcastLink, tags).<>(Event.mapperTo, Event.mapperFrom)
   }
 
   val All = TableQuery[Events]
@@ -31,20 +32,24 @@ class EventsTable(val organizations: OrganizationsTable)(implicit val profile: J
   def all: DBIO[Seq[Event]] = All.result
 
   def add(event: Event): DBIO[Long] =
-    (All.map(e => (e.organizationId, e.name, e.description, e.datetime, e.location, e.capacity, e.broadcastLink)) returning All.map(_.id)) +=
-      (event.organizationId, event.name, event.description, event.datetime, event.location, event.capacity, event.videoBroadcastLink)
+    (All.map(e => (e.organizationId, e.name, e.description, e.datetime, e.location, e.capacity, e.broadcastLink, e.tags)) returning All.map(_.id)) +=
+      (event.organizationId, event.name, event.description, event.datetime, event.location, event.capacity, event.videoBroadcastLink, Event.tagsToStr(event.tags))
 
   def withId(id: Long): DBIO[Option[Event]] = All.filter(_.id === id).result.headOption
 
-  def where(eventFilter: EventFilter): DBIO[Seq[Event]] = All
+  def where(eventFilter: EventFilter): DBIO[Seq[Event]] = {
+    val prepared = All
       .filterOpt(eventFilter.organizationId)(_.organizationId === _)
       .filterOpt(eventFilter.fromDate)(_.datetime >= _)
       .filterOpt(eventFilter.toDate)(_.datetime <= _)
       .filterOpt(eventFilter.location)(_.location === _)
+
+    eventFilter.tags.foldLeft(prepared)((q, t) => q.withFilter(_.tags like s"%:$t:%"))
       .result
+  }
 
   def update(event: Event): DBIO[Int] = {
-    val q = for { c <- All if c.id === event.id } yield (c.name, c.description, c.datetime, c.location, c.capacity, c.broadcastLink)
-    q.update((event.name, event.description, event.datetime, event.location, event.capacity, event.videoBroadcastLink))
+    val q = for { c <- All if c.id === event.id } yield (c.name, c.description, c.datetime, c.location, c.capacity, c.broadcastLink, c.tags)
+    q.update((event.name, event.description, event.datetime, event.location, event.capacity, event.videoBroadcastLink, Event.tagsToStr(event.tags)))
   }
 }
