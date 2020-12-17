@@ -11,7 +11,7 @@ import tevent.user.dto.{LoginData, LoginForm, UserData, UserId}
 import tevent.user.model.User
 import zio.console.Console
 import zio.{ExitCode, Fiber, Has, ZLayer}
-import zio.test.Assertion.{equalTo, hasSameElements, isEmpty, isTrue}
+import zio.test.Assertion.{equalTo, hasSameElements, isEmpty, isSome, isTrue}
 import zio.test.TestAspect.sequential
 import zio.test._
 import zio.test.environment.TestEnvironment
@@ -145,6 +145,28 @@ object TEventIntegrationTest extends DefaultRunnableSpec {
         assert(badRequest)(isTrue) &&
         assert(users2)(equalTo(List(offlineUser))) &&
         assert(events2)(isEmpty)
+      }
+    },
+
+    testM("can remove user") {
+      for {
+        response <- HttpClient.post[LoginForm, LoginData]("http://localhost:8080/api/v1/login", userLogin)
+        token = response.token
+        response <- HttpClient.post[LoginForm, LoginData]("http://localhost:8080/api/v1/login", user2Login)
+        token2 = response.token
+
+        _ <- HttpClient.post[EventParticipationForm, Unit]("http://localhost:8080/api/v1/events/1/join", token2, subscribeJoin)
+        eventUsersBefore <- HttpClient.get[List[EventUserParticipationData]]("http://localhost:8080/api/v1/events/1/users", token)
+
+        _ <- HttpClient.delete("http://localhost:8080/api/v1/user", token2)
+        getError <- HttpClient.get[UserData]("http://localhost:8080/api/v1/user", token2).cause
+        eventUsers <- HttpClient.get[List[EventUserParticipationData]]("http://localhost:8080/api/v1/events/1/users", token)
+        orgUsers <- HttpClient.get[List[OrgUserParticipationData]]("http://localhost:8080/api/v1/organizations/1/users", token)
+      } yield {
+        assert(getError.failureOption)(isSome) &&
+        assert(eventUsersBefore)(hasSameElements(List(offlineUser, subscribedUser))) &&
+        assert(eventUsers)(equalTo(List(offlineUser))) &&
+        assert(orgUsers)(equalTo(List(ownerParticipation)))
       }
     },
 

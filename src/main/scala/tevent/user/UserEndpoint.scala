@@ -24,11 +24,13 @@ final class UserEndpoint[R <: Users with Auth with Organizations with Organizati
   private val httpRoutes = AuthedRoutes.of[User, Task] {
     case GET -> Root as user => Ok(UserData(user.name, user.email))
     case request@PUT -> Root as user => request.req.decode[UserData] { form =>
-      Users.update(user.id, form.name, form.email).foldM(errorResponse, _ => Ok())
+      Users.update(user.id, form.name, form.email).foldM(errorResponse, Ok(_))
     }
+    case DELETE -> Root as user =>
+      Users.remove(user.id).foldM(errorResponse, Ok(_))
 
     case POST -> Root / "revoke" as user =>
-      Auth.revokeTokens(user.id).foldM(errorResponse, _ => Ok())
+      Auth.revokeTokens(user.id).foldM(errorResponse, Ok(_))
     case request@PUT -> Root / "secret" as user => request.req.decode[SecretForm] { form =>
       Auth.changeSecret(user.id, form.secret).foldM(
         failure = errorResponse,

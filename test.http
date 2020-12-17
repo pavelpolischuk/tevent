@@ -26,6 +26,10 @@ PUT http://tevent.herokuapp.com/api/v1/user
 { "name": "Pavel", "email": "paul@com" }
 ###
 
+DELETE http://tevent.herokuapp.com/api/v1/user
+
+
+
 
 
 

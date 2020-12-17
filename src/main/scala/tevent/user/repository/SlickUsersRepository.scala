@@ -1,8 +1,8 @@
 package tevent.user.repository
 
 import slick.dbio.DBIO
+import tevent.core.Db.{TaskOps, ZIOOps}
 import tevent.core.{Db, RepositoryError}
-import tevent.core.Db.{ZIOOps, TaskOps}
 import tevent.user.model.User
 import zio.{IO, Task, URLayer, ZLayer}
 
@@ -13,6 +13,9 @@ object SlickUsersRepository {
 
     override def add(user: User): IO[RepositoryError, Long] =
       io(table.add(user)).refineRepositoryError
+
+    override def remove(id: Long): IO[RepositoryError, Boolean] =
+      io(table.remove(id)).map(_ > 0).refineRepositoryError
 
     override val getAll: IO[RepositoryError, List[User]] =
       io(table.all).map(_.toList).refineRepositoryError

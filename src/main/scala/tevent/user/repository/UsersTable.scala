@@ -26,6 +26,8 @@ class UsersTable(implicit val profile: JdbcProfile)  {
     (All.map(u => (u.name, u.email, u.secretHash, u.lastRevoke)) returning All.map(_.id)) +=
       (user.name, user.email, user.secretHash, user.lastRevoke)
 
+  def remove(id: Long): DBIO[Int] = All.filter(_.id === id).delete
+
   def withId(id: Long): DBIO[Option[User]] = All.filter(_.id === id).result.headOption
 
   def withEmail(email: String): DBIO[Option[User]] = All.filter(_.email === email).result.headOption

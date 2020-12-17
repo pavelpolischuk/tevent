@@ -1,8 +1,9 @@
 package tevent.user.service
 
 import tevent.core.EntityNotFound.noneToNotFound
-import tevent.core.{DomainError, ValidationError}
+import tevent.core.{DomainError, EntityNotFound, ValidationError}
 import tevent.user.model.User
+import tevent.user.model.User.userNamed
 import tevent.user.repository.UsersRepository
 import zio.{IO, URLayer, ZIO, ZLayer}
 
@@ -12,6 +13,7 @@ object Users {
     def findWithEmail(email: String): IO[DomainError, User]
     def createUser(name: String, email: String, secret: String): IO[DomainError, User]
     def update(id: Long, name: String, email: String): IO[DomainError, Unit]
+    def remove(id: Long): IO[DomainError, Unit]
   }
 
   class UsersServiceImpl(repository: UsersRepository.Service) extends Users.Service {
@@ -36,10 +38,16 @@ object Users {
         case Some(user) if user.id != id => IO.fail(ValidationError(s"User with email <$email> exists"))
         case _ => repository.updateInfo(id, name, email)
       }
+
+    override def remove(id: Long): IO[DomainError, Unit] =
+      repository.remove(id).filterOrFail[DomainError](p => p)(EntityNotFound[User, Long](id)).unit
   }
 
   def live: URLayer[UsersRepository, Users] = ZLayer.fromService(new UsersServiceImpl(_))
 
   def update(id: Long, name: String, email: String): ZIO[Users, DomainError, Unit] =
     ZIO.accessM(_.get.update(id, name, email))
+
+  def remove(id: Long): ZIO[Users, DomainError, Unit] =
+    ZIO.accessM(_.get.remove(id))
 }

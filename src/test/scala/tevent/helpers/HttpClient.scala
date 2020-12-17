@@ -2,7 +2,7 @@ package tevent.helpers
 
 import cats.effect.Blocker
 import io.circe.{Decoder, Encoder}
-import org.http4s.Method.{GET, POST, PUT}
+import org.http4s.Method.{DELETE, GET, POST, PUT}
 import org.http4s.client.middleware.{RequestLogger, ResponseLogger}
 import org.http4s.client.{Client, JavaNetClientBuilder}
 import org.http4s.headers.Authorization
@@ -43,6 +43,12 @@ object HttpClient {
   def put[U: Encoder, R: Decoder](uri: String, data: U): Task[R] = expect(PUT, uri, data)
 
   def put[U: Encoder, R: Decoder](uri: String, token: String, data: U): Task[R] = expect(PUT, uri, token, data)
+
+  def delete(uri: String, token: String): Task[Unit] =
+    loggingClient.expect[Unit](
+      Request[Task](DELETE, Uri.unsafeFromString(uri),
+        headers = Headers.of(Authorization(Credentials.Token(AuthScheme.Bearer, token)))
+      ))
 
   def get[R: Decoder](uri: String): Task[R] =
     loggingClient.expect[R](
