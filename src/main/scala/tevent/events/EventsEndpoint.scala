@@ -43,7 +43,7 @@ final class EventsEndpoint[R <: Services] {
 
   private val authedRoutes = AuthedRoutes.of[User, Task] {
     case request@POST -> Root as user => request.req.decode[EventForm] { form =>
-      val event = Event(-1, form.organizationId, form.name, form.nick, form.datetime, form.location, form.capacity, form.videoBroadcastLink, form.tags)
+      val event = Event(-1, form.organizationId, form.name, form.description, form.datetime, form.location, form.capacity, form.videoBroadcastLink, form.tags)
       Events.create(user.id, event).foldM(errorResponse, Ok(_))
     }
 

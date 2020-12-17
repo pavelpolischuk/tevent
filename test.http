@@ -1,16 +1,18 @@
 ### SIGN IN
 POST http://tevent.herokuapp.com/api/v1/signin
-@Content-type: application/json
+Content-type: application/json
 
-{ "name": "Turist", "email": "paul@ya.ruuu", "secret": "8765" }
+{ "name": "Turist", "email": "pol@ya.ruuuu", "secret": "8765" }
+
+> {% client.global.set("auth_token", response.body.token); %}
 
 ### LOGIN
 POST http://tevent.herokuapp.com/api/v1/login
-@Content-type: application/json
+Content-type: application/json
 
-{ "email": "paul@ya.ruuu", "secret": "1234" }
+{ "email": "pol@ya.ruuuu", "secret": "8765" }
 
-
+> {% client.global.set("auth_token", response.body.token); %}
 
 
 
@@ -18,15 +20,18 @@ POST http://tevent.herokuapp.com/api/v1/login
 
 ### USER INFO
 GET http://tevent.herokuapp.com/api/v1/user
+Authorization: Bearer {{auth_token}}
 ###
 
 PUT http://tevent.herokuapp.com/api/v1/user
-@Content-type: application/json
+Authorization: Bearer {{auth_token}}
+Content-type: application/json
 
 { "name": "Pavel", "email": "paul@com" }
 ###
 
 DELETE http://tevent.herokuapp.com/api/v1/user
+Authorization: Bearer {{auth_token}}
 
 
 
@@ -37,15 +42,17 @@ DELETE http://tevent.herokuapp.com/api/v1/user
 
 ### ADD ORGANIZATION
 POST http://tevent.herokuapp.com/api/v1/organizations
-@Content-type: application/json
+Authorization: Bearer {{auth_token}}
+Content-type: application/json
 
 { "name": "Dev Community", "nick": "devcom", "description": "It's community for developers", "tags": ["dev"] }
 
 ### CHANGE
 PUT http://tevent.herokuapp.com/api/v1/organizations/1
-@Content-type: application/json
+Authorization: Bearer {{auth_token}}
+Content-type: application/json
 
-{ "name": "Developers Community", "nick": "devcom", "description": "It's community for developers", tags": ["dev", "it"] }
+{ "name": "Developers Community", "nick": "devcom", "description": "It's community for developers", "tags": ["dev", "it"] }
 
 
 
@@ -58,15 +65,18 @@ GET http://tevent.herokuapp.com/api/v1/organizations?tags=dev
 
 ### SUBSCRIBE TO ORGANIZATION (sub, member, manager, owner)
 POST http://tevent.herokuapp.com/api/v1/organizations/1/join
-@Content-type: application/json
+Authorization: Bearer {{auth_token}}
+Content-type: application/json
 
 { "participationType": "sub" }
 
 ### GET USERS
 GET http://tevent.herokuapp.com/api/v1/organizations/1/users
+Authorization: Bearer {{auth_token}}
 
 ### UNSUBSCRIBE
 POST http://tevent.herokuapp.com/api/v1/organizations/1/leave
+Authorization: Bearer {{auth_token}}
 
 
 
@@ -75,7 +85,8 @@ POST http://tevent.herokuapp.com/api/v1/organizations/1/leave
 
 ### CREATE EVENT
 POST http://tevent.herokuapp.com/api/v1/events
-@Content-type: application/json
+Authorization: Bearer {{auth_token}}
+Content-type: application/json
 
 { "organizationId": 1, "name": "Meetup #1", "description": "It's first meetup for developers",
   "datetime": "2021-01-10T10:15:30+03:00", "location": "Moscow", "capacity": 100, "tags": ["dev", "first"] }
@@ -93,14 +104,17 @@ GET http://tevent.herokuapp.com/api/v1/events?tags=dev
 
 ### REGISTER TO EVENT (online, offline)
 POST http://tevent.herokuapp.com/api/v1/events/1/join
-@Content-type: application/json
+Authorization: Bearer {{auth_token}}
+Content-type: application/json
 
 { "participationType": "offline" }
 
 ### GET USERS
 GET http://tevent.herokuapp.com/api/v1/events/1/users
+Authorization: Bearer {{auth_token}}
 ###
 POST http://tevent.herokuapp.com/api/v1/events/1/leave
+Authorization: Bearer {{auth_token}}
 
 
 
@@ -108,5 +122,7 @@ POST http://tevent.herokuapp.com/api/v1/events/1/leave
 
 ### USER EVENTS & ORGANIZATIONS
 GET http://tevent.herokuapp.com/api/v1/user/events
+Authorization: Bearer {{auth_token}}
 ###
 GET http://tevent.herokuapp.com/api/v1/user/organizations
+Authorization: Bearer {{auth_token}}
