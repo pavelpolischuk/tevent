@@ -1,4 +1,4 @@
-package tevent.mock
+package tevent.events.mock
 
 import tevent.core.RepositoryError
 import tevent.events.model.{EventParticipation, EventParticipationType}

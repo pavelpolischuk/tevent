@@ -3,7 +3,7 @@ package tevent.user.repository
 import slick.dbio.DBIO
 import tevent.core.Db.{TaskOps, ZIOOps}
 import tevent.core.{Db, RepositoryError}
-import tevent.user.model.User
+import tevent.user.model.{Email, GoogleId, User, UserAccount}
 import zio.{IO, Task, URLayer, ZLayer}
 
 object SlickUsersRepository {
@@ -20,8 +20,10 @@ object SlickUsersRepository {
     override val getAll: IO[RepositoryError, List[User]] =
       io(table.all).map(_.toList).refineRepositoryError
 
-    override def findWithEmail(email: String): IO[RepositoryError, Option[User]] =
-      io(table.withEmail(email)).refineRepositoryError
+    override def find(account: UserAccount): IO[RepositoryError, Option[User]] = account match {
+      case Email(email) => io(table.withEmail(email)).refineRepositoryError
+      case GoogleId(id) => io(table.withEmail(id)).refineRepositoryError
+    }
 
     override def getById(id: Long): IO[RepositoryError, Option[User]] =
       io(table.withId(id)).refineRepositoryError

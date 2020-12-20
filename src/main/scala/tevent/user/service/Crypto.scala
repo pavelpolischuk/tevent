@@ -8,18 +8,12 @@ import zio.{IO, Task, URLayer, ZIO}
 object Crypto {
   trait Service {
     def dbSecret(userSecret: String, rounds: Int = 12): IO[ExecutionError, String]
-
     def verifySecret(userSecret: String, dbSecret: String): IO[ExecutionError, Boolean]
-
-    def sign(message: String): IO[ExecutionError, String]
-
     def getSignedToken(userId: Long, issueTime: Long): IO[ExecutionError, UserToken]
-
     def validateSignedToken(token: String): IO[DomainError, UserToken]
   }
 
   class BcryptService(secret: String) extends Service {
-
     import com.github.t3hnar.bcrypt.BCryptStrOps
 
     import javax.crypto.Mac
@@ -33,7 +27,7 @@ object Crypto {
     override def verifySecret(userSecret: String, dbSecret: String): IO[ExecutionError, Boolean] =
       IO.fromTry(userSecret.isBcryptedSafeBounded(dbSecret)).mapError(ExecutionError)
 
-    override def sign(message: String): IO[ExecutionError, String] =
+    private def sign(message: String): IO[ExecutionError, String] =
       Task {
         val mac = Mac.getInstance("HmacSHA1")
         mac.init(key)

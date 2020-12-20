@@ -6,19 +6,17 @@ import org.http4s.implicits.{http4sKleisliResponseSyntaxOptionT, http4sLiteralsS
 import org.http4s.{Method, Request, Status}
 import tevent.core.EntityNotFound
 import tevent.helpers.AlwaysAuthMiddleware
+import tevent.helpers.TestData._
 import tevent.helpers.TestHelper.checkRequest
-import tevent.mock.{OrganizationParticipantsMock, OrganizationsMock}
-import tevent.organizations.dto._
-import tevent.organizations.model.{OrgManager, OrgParticipation, OrgSubscriber, Organization}
+import tevent.organizations.mock.{OrganizationParticipantsMock, OrganizationsMock}
+import tevent.organizations.model.{OrgParticipation, Organization}
 import tevent.organizations.service.{OrganizationParticipants, Organizations}
-import tevent.user.dto.UserId
-import tevent.user.model.User
 import zio.RIO
 import zio.interop.catz.taskConcurrentInstance
 import zio.test.Assertion.equalTo
+import zio.test._
 import zio.test.environment.TestEnvironment
 import zio.test.mock.Expectation
-import zio.test.{DefaultRunnableSpec, ZSpec, assert, assertM, suite, testM}
 
 object OrganizationsEndpointTest extends DefaultRunnableSpec {
   type Task[A] = RIO[Organizations with OrganizationParticipants, A]
@@ -56,14 +54,14 @@ object OrganizationsEndpointTest extends DefaultRunnableSpec {
     },
     testM("should get requests") {
       val organizationParticipants = OrganizationParticipantsMock.GetRequests(
-        equalTo((user.id, organization.id)), Expectation.value(List((user, memberRequest.participationType, user))))
+        equalTo((user.id, organization.id)), Expectation.value(List((user2, memberRequest.participationType, user2))))
       val getReq = Request[Task](Method.GET, uri"/organizations/1/requests")
       checkRequest(app.run(getReq), Status.Ok, Some(List(memberRequest)))
         .provideSomeLayer(organizationParticipants ++ organizations)
     },
     testM("should approve participation") {
       val organizationParticipants = OrganizationParticipantsMock.ApproveRequest(
-        equalTo((user.id, organization.id, user.id)), Expectation.unit)
+        equalTo((user2.id, organization.id, user.id)), Expectation.unit)
       val postApproveReq = Request[Task](Method.POST, uri"/organizations/1/approve")
         .withEntity(memberApprove.asJson)
       app.run(postApproveReq).map(res => assert(res.status)(equalTo(Status.Ok)))
@@ -71,7 +69,7 @@ object OrganizationsEndpointTest extends DefaultRunnableSpec {
     },
     testM("should get participants") {
       val organizationParticipants = OrganizationParticipantsMock.GetUsers(
-        equalTo((user.id, organization.id)), Expectation.value(List((user, memberRequest.participationType))))
+        equalTo((user.id, organization.id)), Expectation.value(List((user2, memberRequest.participationType))))
       val getPartReq = Request[Task](Method.GET, uri"/organizations/1/users")
       checkRequest(app.run(getPartReq), Status.Ok, Some(List(memberParticipation)))
         .provideSomeLayer(organizationParticipants ++ organizations)
@@ -84,18 +82,6 @@ object OrganizationsEndpointTest extends DefaultRunnableSpec {
         .provideSomeLayer(organizationParticipants ++ organizations)
     }
   )
-
-
-  private val user = User(1, "Paul", "paul@g.com", "1234", 0)
-  private val userId = UserId(user.id, user.name)
-  private val organization = Organization(1, "Paul Corp.", "pcorp", "Description", List("scala", "dev"))
-  private val organizationForm = OrganizationForm(organization.name, organization.nick, organization.description, organization.tags)
-
-  private val subscribeRequestForm = OrgParticipationForm(OrgSubscriber)
-  private val memberRequestForm = OrgParticipationForm(OrgManager)
-  private val memberRequest = OrgParticipationRequest(userId, memberRequestForm.participationType, None)
-  private val memberApprove = OrgParticipationApprove(user.id)
-  private val memberParticipation = OrgUserParticipationData(userId, memberRequestForm.participationType)
 
   private val endpoint = new OrganizationsEndpoint[Organizations with OrganizationParticipants]
   private val app = endpoint.routes(AlwaysAuthMiddleware(user)).orNotFound

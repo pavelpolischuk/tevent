@@ -1,17 +1,15 @@
 package tevent.notification
 
-import tevent.events.model.Event
+import tevent.helpers.TestData._
 import tevent.helpers.TestHelper.mappedAssert
-import tevent.mock.{EmailMock, OrganizationParticipantsRepositoryMock, OrganizationsMock}
+import tevent.organizations.mock.{OrganizationParticipantsRepositoryMock, OrganizationsMock}
+import tevent.notification.mock.EmailMock
 import tevent.organizations.dto.{OrgParticipationRequest => _}
-import tevent.organizations.model.{OrgSubscriber, Organization}
-import tevent.user.model.User
+import tevent.organizations.model.{OrgManager, OrgSubscriber}
 import zio.test.Assertion.equalTo
 import zio.test._
 import zio.test.environment.TestEnvironment
 import zio.test.mock.Expectation
-
-import java.time.ZonedDateTime
 
 object NotificationTest extends DefaultRunnableSpec {
 
@@ -21,13 +19,14 @@ object NotificationTest extends DefaultRunnableSpec {
       val repo = OrganizationsMock.Empty ++ OrganizationParticipantsRepositoryMock.Empty
       val notifier = sender ++ repo >>> Notification.live
       for {
-        _ <- Notification.notifyNewEvent(organization, event, users).provideSomeLayer(notifier)
+        _ <- Notification.notifyNewEvent(organization, event, List(user, user2)).provideSomeLayer(notifier)
       } yield assertCompletes
     },
 
     testM("send emails to all subscribers of organization") {
       val organizations = OrganizationsMock.Get(equalTo(organization.id), Expectation.value(organization))
-      val participants = OrganizationParticipantsRepositoryMock.GetParticipants(equalTo(organization.id), Expectation.value(users.map((_, OrgSubscriber))))
+      val participants = OrganizationParticipantsRepositoryMock.GetParticipants(
+        equalTo(organization.id), Expectation.value(List((user, OrgManager), (user2, OrgSubscriber))))
       val notifier = organizations ++ participants ++ sender >>> Notification.live
       for {
         _ <- Notification.notifySubscribers(event).provideSomeLayer(notifier)
@@ -36,10 +35,7 @@ object NotificationTest extends DefaultRunnableSpec {
 
   )
 
-  private val organization = Organization(1, "Paul Corp.", "pcorp", "Description", List("scala", "dev"))
-  private val event = Event(1, organization.id, "Paul Meetup #1", "Meetup Description", ZonedDateTime.now(), Some("Moscow"), Some(1), Some("video"), List("dev"))
-  private val users = List(User(1, "N1", "e1", "", 0), User(2, "N2", "e2", "", 0))
-
-  private def sender = users.foldRight(EmailMock.Empty)((u, e) =>
-    EmailMock.SendMail(mappedAssert[(String, String, String), String](_._1, equalTo(u.email))) ++ e)
+  private def sender =
+    EmailMock.SendMail(mappedAssert[(String, String, String), String](_._1, equalTo(user.email))) and
+    EmailMock.SendMail(mappedAssert[(String, String, String), String](_._1, equalTo(user2.email)))
 }

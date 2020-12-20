@@ -1,12 +1,11 @@
-package tevent.mock
+package tevent.events.mock
 
 import tevent.core.RepositoryError
-import tevent.events.model.{Event, EventFilter, EventParticipation, EventParticipationType}
+import tevent.events.model.{Event, EventFilter, EventParticipationType}
 import tevent.events.repository.EventsRepository
-import tevent.user.model.User
 import zio.test.mock
-import zio.{Has, IO, URLayer, ZLayer}
 import zio.test.mock.{Expectation, Mock}
+import zio.{Has, IO, URLayer, ZLayer}
 
 object EventsRepositoryMock extends Mock[EventsRepository] {
   object Add extends Effect[Event, RepositoryError, Long]

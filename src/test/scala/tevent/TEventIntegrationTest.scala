@@ -1,22 +1,20 @@
 package tevent
 
-import tevent.organizations.model.{OrgManager, OrgOwner, OrgSubscriber, Organization}
 import tevent.events.dto.{EventForm, EventParticipationData, EventParticipationForm, EventUserParticipationData}
-import tevent.organizations.dto.{OrgParticipationApprove, OrgParticipationData, OrgParticipationForm, OrgParticipationRequest, OrgUserParticipationData, OrganizationForm}
-import tevent.main.Environments.testEnvironment
-import tevent.events.model.{Event, EventSubscriber, OfflineParticipant}
+import tevent.events.model.Event
 import tevent.helpers.HttpClient
+import tevent.helpers.TestData._
+import tevent.main.Environments.testEnvironment
 import tevent.main.Server
-import tevent.user.dto.{LoginData, LoginForm, UserData, UserId}
-import tevent.user.model.User
+import tevent.organizations.dto._
+import tevent.organizations.model.{OrgOwner, OrgSubscriber, Organization}
+import tevent.user.dto.{LoginData, LoginForm, UserData}
 import zio.console.Console
-import zio.{ExitCode, Fiber, Has, ZLayer}
-import zio.test.Assertion.{equalTo, hasSameElements, isEmpty, isSome, isTrue}
+import zio.test.Assertion._
 import zio.test.TestAspect.sequential
 import zio.test._
 import zio.test.environment.TestEnvironment
-
-import java.time.ZonedDateTime
+import zio.{ExitCode, Fiber, Has, ZLayer}
 
 object TEventIntegrationTest extends DefaultRunnableSpec {
 
@@ -174,32 +172,4 @@ object TEventIntegrationTest extends DefaultRunnableSpec {
 
   private def httpServer: ZLayer[Any with Console, Nothing, Has[Fiber.Runtime[Nothing, ExitCode]]] =
     Server.runServer.provideLayer(testEnvironment).exitCode.forkManaged.toLayer
-
-  private val user = User(1, "Paul", "paul@g.com", "1234", 0)
-  private val userLogin = LoginForm(Some(user.name), user.email, user.secretHash)
-  private val userId = UserId(user.id, user.name)
-  private val userData = UserData(user.name, user.email)
-
-  private val user2 = User(2, "Phil", "phil@g.com", "2345", 0)
-  private val user2Login = LoginForm(Some(user2.name), user2.email, user2.secretHash)
-  private val user2Id = UserId(user2.id, user2.name)
-
-  private val organization = Organization(1, "Paul Corp.", "pcorp", "Paul Description", List("scala", "dev"))
-  private val organizationForm = OrganizationForm(organization.name, organization.nick, organization.description, organization.tags)
-
-  private val ownerParticipation = OrgUserParticipationData(userId, OrgOwner)
-  private val memberRequestForm = OrgParticipationForm(OrgManager)
-  private val memberRequest = OrgParticipationRequest(user2Id, memberRequestForm.participationType, None)
-  private val memberApprove = OrgParticipationApprove(user2.id)
-  private val memberParticipation = OrgUserParticipationData(user2Id, memberRequestForm.participationType)
-
-  private val event = Event(1, organization.id, "Paul Meetup #1", "Meetup Description", ZonedDateTime.now(), Some("Moscow"), Some(1), None, List("dev"))
-  private val eventForm = EventForm(event.id, event.name, event.description, event.datetime, event.location, event.capacity, event.videoBroadcastLink, event.tags)
-
-  private val offlineJoin = EventParticipationForm(OfflineParticipant)
-  private val offlineParticipation = EventParticipationData(event, offlineJoin.participationType)
-  private val offlineUser = EventUserParticipationData(userId, offlineJoin.participationType)
-  private val subscribeJoin = EventParticipationForm(EventSubscriber)
-  private val subscribedParticipation = EventParticipationData(event, subscribeJoin.participationType)
-  private val subscribedUser = EventUserParticipationData(user2Id, subscribeJoin.participationType)
 }

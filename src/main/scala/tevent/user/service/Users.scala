@@ -2,7 +2,7 @@ package tevent.user.service
 
 import tevent.core.EntityNotFound.noneToNotFound
 import tevent.core.{DomainError, EntityNotFound, ValidationError}
-import tevent.user.model.User
+import tevent.user.model.{Email, User, UserAccount}
 import tevent.user.model.User.userNamed
 import tevent.user.repository.UsersRepository
 import zio.{IO, URLayer, ZIO, ZLayer}
@@ -10,8 +10,8 @@ import zio.{IO, URLayer, ZIO, ZLayer}
 object Users {
   trait Service {
     def get(id: Long): IO[DomainError, User]
-    def findWithEmail(email: String): IO[DomainError, User]
-    def createUser(name: String, email: String, secret: String): IO[DomainError, User]
+    def find(account: UserAccount): IO[DomainError, User]
+    def create(name: String, email: String, secret: String): IO[DomainError, User]
     def update(id: Long, name: String, email: String): IO[DomainError, Unit]
     def remove(id: Long): IO[DomainError, Unit]
   }
@@ -21,20 +21,20 @@ object Users {
     override def get(id: Long): IO[DomainError, User] =
       repository.getById(id).flatMap(noneToNotFound(id))
 
-    override def findWithEmail(email: String): IO[DomainError, User] =
-      repository.findWithEmail(email).flatMap(noneToNotFound(email))
+    override def find(email: UserAccount): IO[DomainError, User] =
+      repository.find(email).flatMap(noneToNotFound(email))
 
-    override def createUser(name: String, email: String, secret: String): IO[DomainError, User] =
-      repository.findWithEmail(email).flatMap {
+    override def create(name: String, email: String, secret: String): IO[DomainError, User] =
+      repository.find(Email(email)).flatMap {
         case None =>
-          val user = User(id = -1, name = name, email = email, secretHash = secret, lastRevoke = 0)
+          val user = User(id = -1, name = name, email = email, secretHash = Some(secret), googleId = None, lastRevoke = 0)
           repository.add(user).map(id => user.copy(id = id))
 
         case _ => IO.fail(ValidationError(s"User with email <$email> exists"))
       }
 
     override def update(id: Long, name: String, email: String): IO[DomainError, Unit] =
-      repository.findWithEmail(email).flatMap {
+      repository.find(Email(email)).flatMap {
         case Some(user) if user.id != id => IO.fail(ValidationError(s"User with email <$email> exists"))
         case _ => repository.updateInfo(id, name, email)
       }

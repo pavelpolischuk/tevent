@@ -1,4 +1,4 @@
-package tevent.mock
+package tevent.organizations.mock
 
 import tevent.core.DomainError
 import tevent.organizations.model.{OrgParticipation, OrgParticipationType, Organization}

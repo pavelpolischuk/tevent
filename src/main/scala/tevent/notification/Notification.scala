@@ -41,7 +41,7 @@ When: ${event.datetime}
       }
 
       // ToDo: Loggin errors .mapError(ExecutionError).unit
-      ZIO.foreachParN(4)(users)(u => email.sendMail(u.email, subject, body).either).unit
+      ZIO.foreach(users)(u => email.sendMail(u.email, subject, body).either).unit
     }
   }
 

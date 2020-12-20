@@ -5,16 +5,15 @@ import org.http4s._
 import org.http4s.circe.CirceEntityCodec.{circeEntityDecoder, circeEntityEncoder}
 import org.http4s.dsl.Http4sDsl
 import org.http4s.headers.Authorization
-import tevent.core.{DomainError, ValidationError}
 import tevent.core.ErrorMapper.errorResponse
-import tevent.user.dto.{LoginData, LoginForm}
+import tevent.core.{DomainError, ValidationError}
+import tevent.user.dto.{GoogleLoginForm, LoginData, LoginForm}
 import tevent.user.model.User
-import tevent.user.service.{Auth, Crypto}
-import zio.clock.Clock
+import tevent.user.service.Auth
 import zio.interop.catz.taskConcurrentInstance
 import zio.{RIO, ZIO}
 
-final class AuthEndpoint[R <: Auth with Crypto with Clock] {
+final class AuthEndpoint[R <: Auth] {
   type Task[A] = RIO[R, A]
 
   private val dsl = Http4sDsl[Task]
@@ -40,6 +39,12 @@ final class AuthEndpoint[R <: Auth with Crypto with Clock] {
       Auth.signIn(form.name.getOrElse(""), form.email, form.secret).foldM(
         failure = errorResponse,
         success = token => Ok(LoginData("Signed in", token.signedString))
+      )
+    }
+    case request@POST -> Root / "auth" / "google" => request.decode[GoogleLoginForm] { form =>
+      Auth.google(form.idtoken).foldM(
+        failure = errorResponse,
+        success = token => Ok(LoginData("Logged in", token.signedString))
       )
     }
     case request@POST -> Root / "login" => request.decode[LoginForm] { form =>

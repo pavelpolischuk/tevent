@@ -1,7 +1,7 @@
 package tevent.user.repository
 
 import tevent.core.RepositoryError
-import tevent.user.model.User
+import tevent.user.model.{User, UserAccount}
 import zio.IO
 
 object UsersRepository {
@@ -11,7 +11,7 @@ object UsersRepository {
     val getAll: IO[RepositoryError, List[User]]
     def getById(id: Long): IO[RepositoryError, Option[User]]
 
-    def findWithEmail(email: String): IO[RepositoryError, Option[User]]
+    def find(account: UserAccount): IO[RepositoryError, Option[User]]
 
     def updateInfo(id: Long, name: String, email: String): IO[RepositoryError, Unit]
     def changeSecret(id: Long, secret: String, lastRevoke: Long): IO[RepositoryError, Unit]
