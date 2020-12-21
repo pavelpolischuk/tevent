@@ -47,6 +47,11 @@ DELETE http://tevent.herokuapp.com/api/v1/user
 Authorization: Bearer {{auth_token}}
 
 
+### REVOKE ALL TOKENS
+POST http://tevent.herokuapp.com/api/v1/user/revoke
+Authorization: Bearer {{auth_token}}
+
+
 
 
 
