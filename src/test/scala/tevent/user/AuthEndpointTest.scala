@@ -58,6 +58,17 @@ object AuthEndpointTest extends DefaultRunnableSpec {
         .withEntity(googleToken.asJson)
       checkRequest(app.run(postReq), Status.Ok, Some(LoginData("Logged in", userToken.signedString)))
         .provideSomeLayer(auth)
+    },
+    testM("should validate token") {
+      val auth = AuthMock.ValidateUser(equalTo("123"), Expectation.value(user))
+      val req = Request[Task](Method.GET, uri"/auth/validate?token=123")
+      checkRequest(app.run(req), Status.Ok, Some("Ok")).provideSomeLayer(auth)
+    },
+    testM("should fail validate bad token") {
+      val auth = AuthMock.ValidateUser(equalTo("123"), Expectation.failure(ValidationError("")))
+      val req = Request[Task](Method.GET, uri"/auth/validate?token=123")
+      app.run(req).map(result => assert(result.status)(equalTo(Status.BadRequest)))
+        .provideSomeLayer(auth)
     }
   )
 

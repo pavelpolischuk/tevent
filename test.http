@@ -14,6 +14,19 @@ Content-type: application/json
 
 > {% client.global.set("auth_token", response.body.token); %}
 
+### AUTH WITH GOOGLE
+POST http://tevent.herokuapp.com/api/v1/auth/google
+Content-type: application/json
+
+{ "idtoken": "token" }
+
+> {% client.global.set("auth_token", response.body.token); %}
+
+### CHECK TOKEN
+GET http://tevent.herokuapp.com/api/v1/auth/validate?token={{auth_token}}
+
+
+
 
 
 

@@ -7,6 +7,7 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.headers.Authorization
 import tevent.core.ErrorMapper.errorResponse
 import tevent.core.{DomainError, ValidationError}
+import tevent.user.dto.LoginForm.TokenQueryParamMatcher
 import tevent.user.dto.{GoogleLoginForm, LoginData, LoginForm}
 import tevent.user.model.User
 import tevent.user.service.Auth
@@ -41,18 +42,23 @@ final class AuthEndpoint[R <: Auth] {
         success = token => Ok(LoginData("Signed in", token.signedString))
       )
     }
+    case request@POST -> Root / "login" => request.decode[LoginForm] { form =>
+      Auth.login(form.email, form.secret).foldM(
+        failure = errorResponse,
+        success = token => Ok(LoginData("Logged in", token.signedString))
+      )
+    }
     case request@POST -> Root / "auth" / "google" => request.decode[GoogleLoginForm] { form =>
       Auth.google(form.idtoken).foldM(
         failure = errorResponse,
         success = token => Ok(LoginData("Logged in", token.signedString))
       )
     }
-    case request@POST -> Root / "login" => request.decode[LoginForm] { form =>
-      Auth.login(form.email, form.secret).foldM(
-          failure = errorResponse,
-          success = token => Ok(LoginData("Logged in", token.signedString))
-        )
-    }
+    case GET -> Root / "auth" / "validate" :? TokenQueryParamMatcher(token) =>
+      Auth.validateUser(token).foldM(
+        failure = errorResponse,
+        success = _ => Ok("Ok")
+      )
   }
 
   def routes: HttpRoutes[Task] = httpRoutes
