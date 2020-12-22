@@ -3,6 +3,7 @@ package tevent.events.repository.tables
 import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
 import tevent.events.model.{Event, EventParticipation, EventParticipationType}
+import tevent.organizations.model.PlainOrganization
 import tevent.user.model.User
 import tevent.user.repository.UsersTable
 
@@ -23,10 +24,11 @@ class EventParticipantsTable(val users: UsersTable, val events: EventsTable)(imp
 
   val All = TableQuery[EventParticipantsTable]
 
-  def forUser(userId: Long): DBIO[Seq[(Event, EventParticipationType)]] = (for {
+  def forUser(userId: Long): DBIO[Seq[(Event, EventParticipationType, PlainOrganization)]] = (for {
     part <- All if part.userId === userId
     event <- part.event
-  } yield (event, part.participationType) ).result
+    org <- event.organization
+  } yield (event, part.participationType, org) ).result
 
   def getUsersBy(eventId: Long): DBIO[Seq[(User, EventParticipationType)]] = (for {
     part <- All if part.eventId === eventId

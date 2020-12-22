@@ -17,11 +17,12 @@ object SlickOrganizationsRepository {
     override def add(organization: Organization): IO[RepositoryError, Long] =
       io(organizations.add(organization)).tap(id => io(tags.add(id, organization.tags))).refineRepositoryError
 
+    private def mapWithTags(org: PlainOrganization) =
+      io(tags.withId(org.id)).map(t => Organization(org.id, org.name, org.nick, org.description, t.toList))
+
     override val getAll: IO[RepositoryError, List[Organization]] =
       io(organizations.all).flatMap(
-        ZIO.foreach(_)(org => io(tags.withId(org.id)).map(t =>
-          Organization(org.id, org.name, org.nick, org.description, t.toList)
-        )).map(_.toList)
+        ZIO.foreach(_)(mapWithTags).map(_.toList)
       ).refineRepositoryError
 
     override def search(filter: OrganizationFilter): IO[RepositoryError, List[Organization]] =
@@ -42,7 +43,7 @@ object SlickOrganizationsRepository {
     override def getById(id: Long): IO[RepositoryError, Option[Organization]] =
       io(organizations.withId(id)).flatMap {
         case None => IO.none
-        case Some(org) => io(tags.withId(org.id)).map(t => Organization(org.id, org.name, org.nick, org.description, t.toList)).option
+        case Some(org) => mapWithTags(org).option
       }.refineRepositoryError
 
     override def update(organization: Organization): IO[RepositoryError, Unit] =

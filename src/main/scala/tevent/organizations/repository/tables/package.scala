@@ -16,11 +16,4 @@ package object tables {
       }
     )
   }
-
-  private[repository] case class PlainOrganization(id: Long, name: String, nick: String, description: String)
-
-  private[repository] object PlainOrganization {
-    def mapperTo(tuple: (Long, String, String, String)): PlainOrganization =
-      PlainOrganization(tuple._1, tuple._2, tuple._3, tuple._4)
-  }
 }

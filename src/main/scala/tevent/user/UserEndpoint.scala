@@ -22,12 +22,12 @@ final class UserEndpoint[R <: Users with Auth with Organizations with Organizati
   import dsl._
 
   private val httpRoutes = AuthedRoutes.of[User, Task] {
-    case GET -> Root as user => Ok(UserData(user.name, user.email))
+    case GET -> Root as user => Ok(UserData.mapperTo(user))
     case request@PUT -> Root as user => request.req.decode[UserData] { form =>
-      Users.update(user.id, form.name, form.email).foldM(errorResponse, Ok(_))
+      Users.update(user.typedId, form.name, form.email).foldM(errorResponse, Ok(_))
     }
     case DELETE -> Root as user =>
-      Users.remove(user.id).foldM(errorResponse, Ok(_))
+      Users.remove(user.typedId).foldM(errorResponse, Ok(_))
 
     case POST -> Root / "revoke" as user =>
       Auth.revokeTokens(user.id).foldM(errorResponse, Ok(_))
@@ -38,13 +38,13 @@ final class UserEndpoint[R <: Users with Auth with Organizations with Organizati
     }
 
     case GET -> Root / "events" as user =>
-      Events.getByUser(user.id).foldM(errorResponse,
+      Events.getByUser(user.typedId).foldM(errorResponse,
         p => Ok(p.map(EventParticipationData.mapperTo)))
     case GET -> Root / "organizations" as user =>
-      Organizations.getByUser(user.id).foldM(errorResponse,
+      Organizations.getByUser(user.typedId).foldM(errorResponse,
         p => Ok(p.map(OrgParticipationData.mapperTo)))
     case GET -> Root / "requests" as user =>
-      OrganizationParticipants.getOwnRequests(user.id).foldM(errorResponse,
+      OrganizationParticipants.getOwnRequests(user.typedId).foldM(errorResponse,
         r => Ok(r.map(OwnOrgParticipationRequest.mapperTo)))
   }
 

@@ -5,6 +5,7 @@ import tevent.core.Db.{TaskOps, ZIOOps}
 import tevent.core.{Db, RepositoryError}
 import tevent.events.model.{Event, EventFilter, EventParticipationType}
 import tevent.events.repository.tables.{EventParticipantsTable, EventsTable}
+import tevent.organizations.model.PlainOrganization
 import zio.{IO, Task, URLayer, ZLayer}
 
 object SlickEventsRepository {
@@ -16,13 +17,13 @@ object SlickEventsRepository {
     override def add(event: Event): IO[RepositoryError, Long] =
       io(events.add(event)).refineRepositoryError
 
-    override def search(eventFilter: EventFilter): IO[RepositoryError, List[Event]] =
+    override def search(eventFilter: EventFilter): IO[RepositoryError, List[(Event, PlainOrganization)]] =
       io(events.where(eventFilter)).map(_.toList).refineRepositoryError
 
-    override def getByUser(userId: Long): IO[RepositoryError, List[(Event, EventParticipationType)]] =
+    override def getByUser(userId: Long): IO[RepositoryError, List[(Event, EventParticipationType, PlainOrganization)]] =
       io(participants.forUser(userId)).map(_.toList).refineRepositoryError
 
-    override def getById(id: Long): IO[RepositoryError, Option[Event]] =
+    override def getById(id: Long): IO[RepositoryError, Option[(Event, PlainOrganization)]] =
       io(events.withId(id)).refineRepositoryError
 
     override def update(event: Event): IO[RepositoryError, Unit] =

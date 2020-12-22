@@ -1,6 +1,6 @@
 package tevent
 
-import tevent.events.dto.{EventForm, EventParticipationData, EventParticipationForm, EventUserParticipationData}
+import tevent.events.dto.{EventData, EventForm, EventParticipationData, EventParticipationForm, EventUserParticipationData}
 import tevent.events.model.Event
 import tevent.helpers.HttpClient
 import tevent.helpers.TestData._
@@ -108,12 +108,12 @@ object TEventIntegrationTest extends DefaultRunnableSpec {
 
         added <- HttpClient.post[EventForm, Event]("http://localhost:8080/api/v1/events", token, eventForm)
 
-        gotten <- HttpClient.get[Event]("http://localhost:8080/api/v1/events/1", token)
-        forOrganization <- HttpClient.get[List[Event]]("http://localhost:8080/api/v1/events?organization=1", token)
+        gotten <- HttpClient.get[EventData]("http://localhost:8080/api/v1/events/1", token)
+        forOrganization <- HttpClient.get[List[EventData]]("http://localhost:8080/api/v1/events?organization=1", token)
       } yield {
         assert(added)(equalTo(event)) &&
-        assert(gotten)(equalTo(event)) &&
-        assert(forOrganization)(equalTo(List(event)))
+        assert(gotten)(equalTo(eventData)) &&
+        assert(forOrganization)(equalTo(List(eventData)))
       }
     },
 

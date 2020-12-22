@@ -1,7 +1,7 @@
 package tevent.user.service
 
 import tevent.core.{DomainError, ExecutionError, ValidationError}
-import tevent.user.model.{Email, GoogleId, User, UserToken}
+import tevent.user.model.{Email, GoogleId, User, UserId, UserToken}
 import tevent.user.repository.UsersRepository
 import zio.clock.Clock
 import zio.{IO, URLayer, ZIO, ZLayer}
@@ -48,7 +48,7 @@ object Auth {
 
       override def validateUser(token: String): IO[DomainError, User] = for {
         token <- crypto.validateSignedToken(token)
-        user <- users.get(token.id).filterOrFail(_.lastRevoke <= token.issueTime)(ValidationError("Token revoked"))
+        user <- users.get(UserId(token.id)).filterOrFail(_.lastRevoke <= token.issueTime)(ValidationError("Token revoked"))
       } yield user
 
       override def changeSecret(id: Long, secret: String): IO[DomainError, UserToken] = for {

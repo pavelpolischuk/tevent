@@ -2,7 +2,7 @@ package tevent.notification
 
 import tevent.core.DomainError
 import tevent.events.model.Event
-import tevent.organizations.model.Organization
+import tevent.organizations.model.{Organization, OrganizationId}
 import tevent.organizations.repository.OrganizationParticipantsRepository
 import tevent.organizations.service.Organizations
 import tevent.user.model.User
@@ -19,7 +19,7 @@ object Notification {
                                  email: Email.Service) extends Notification.Service {
 
     override def notifySubscribers(event: Event): IO[DomainError, Unit] = for {
-      organization <- organizations.get(event.organizationId)
+      organization <- organizations.get(OrganizationId(event.organizationId))
       users <- participants.getParticipants(organization.id).map(_.map(_._1))
       _ <- notifyNewEvent(organization, event, users)
     } yield ()

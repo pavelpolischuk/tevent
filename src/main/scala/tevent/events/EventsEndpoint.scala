@@ -7,7 +7,7 @@ import org.http4s.server.{AuthMiddleware, Router}
 import org.http4s.{AuthedRoutes, HttpRoutes}
 import tevent.core.ErrorMapper.errorResponse
 import tevent.events.dto.EventFilters._
-import tevent.events.dto.{EventForm, EventParticipationForm, EventUserParticipationData}
+import tevent.events.dto.{EventForm, EventIdVar, EventParticipationForm, EventUserParticipationData}
 import tevent.events.model.{Event, EventFilter, EventParticipation}
 import tevent.events.service.{EventParticipants, Events}
 import tevent.user.model.User
@@ -21,7 +21,7 @@ final class EventsEndpoint[R <: Services] {
   import dsl._
 
   private val httpRoutes = HttpRoutes.of[Task] {
-    case GET -> Root / LongVar(id) =>
+    case GET -> Root / EventIdVar(id) =>
       Events.get(id).foldM(errorResponse, Ok(_))
 
     case GET -> Root
@@ -44,18 +44,18 @@ final class EventsEndpoint[R <: Services] {
   private val authedRoutes = AuthedRoutes.of[User, Task] {
     case request@POST -> Root as user => request.req.decode[EventForm] { form =>
       val event = Event(-1, form.organizationId, form.name, form.description, form.datetime, form.location, form.capacity, form.videoBroadcastLink, form.tags)
-      Events.create(user.id, event).foldM(errorResponse, Ok(_))
+      Events.create(user.typedId, event).foldM(errorResponse, Ok(_))
     }
 
-    case GET -> Root / LongVar(id) / "users" as user =>
-      EventParticipants.getUsers(user.id, id).foldM(errorResponse,
+    case GET -> Root / EventIdVar(id) / "users" as user =>
+      EventParticipants.getUsers(user.typedId, id).foldM(errorResponse,
         r => Ok(r.map(EventUserParticipationData.mapperTo)))
-    case request@POST -> Root / LongVar(id) / "join" as user => request.req.decode[EventParticipationForm] { form =>
-      val r = EventParticipation(user.id, id, form.participationType)
+    case request@POST -> Root / EventIdVar(id) / "join" as user => request.req.decode[EventParticipationForm] { form =>
+      val r = EventParticipation(user.id, id.id, form.participationType)
       EventParticipants.joinEvent(r).foldM(errorResponse, Ok(_))
     }
-    case POST -> Root / LongVar(id) / "leave" as user =>
-      EventParticipants.leaveEvent(user.id, id).foldM(errorResponse, Ok(_))
+    case POST -> Root / EventIdVar(id) / "leave" as user =>
+      EventParticipants.leaveEvent(user.typedId, id).foldM(errorResponse, Ok(_))
   }
 
   def routes(implicit middleware: AuthMiddleware[Task, User]): HttpRoutes[Task] =

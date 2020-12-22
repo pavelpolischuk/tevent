@@ -14,15 +14,14 @@ case class Event(id: Long,
                  location: Option[String],
                  capacity: Option[Int],
                  videoBroadcastLink: Option[String],
-                 tags: List[String])
+                 tags: List[String]) {
+
+  def typedId: EventId = EventId(id)
+}
 
 object Event {
   implicit val eventEncoder: Encoder[Event] = deriveEncoder[Event]
   implicit val eventDecoder: Decoder[Event] = deriveDecoder[Event]
-
-  implicit object EventEntity extends EntityType[Event] {
-    override val name: String = "Event"
-  }
 
   def mapperTo(tuple: (Long, Long, String, String, ZonedDateTime, Option[String], Option[Int], Option[String], String)): Event =
     Event(tuple._1, tuple._2, tuple._3, tuple._4, tuple._5, tuple._6, tuple._7, tuple._8, tagsFromStr(tuple._9))

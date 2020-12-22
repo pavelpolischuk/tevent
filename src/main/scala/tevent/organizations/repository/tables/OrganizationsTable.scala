@@ -2,7 +2,7 @@ package tevent.organizations.repository.tables
 
 import slick.jdbc.JdbcProfile
 import slick.lifted.ProvenShape
-import tevent.organizations.model.Organization
+import tevent.organizations.model.{Organization, PlainOrganization}
 
 class OrganizationsTable(implicit val profile: JdbcProfile) {
   import profile.api._

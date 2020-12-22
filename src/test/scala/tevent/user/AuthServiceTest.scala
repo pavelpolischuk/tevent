@@ -43,7 +43,7 @@ object AuthServiceTest extends DefaultRunnableSpec {
     },
     testM("fail validate old token") {
       val crypto = CryptoMock.ValidateSignedToken(equalTo(userToken.signedString), Expectation.value(userToken))
-      val users = UsersMock.Get(equalTo(user.id), Expectation.value(user.copy(lastRevoke = userToken.issueTime + 1)))
+      val users = UsersMock.Get(equalTo(user.typedId), Expectation.value(user.copy(lastRevoke = userToken.issueTime + 1)))
       val service = ZLayer.identity[Clock] ++ (crypto ++ users ++ repo ++ orgs ++ google) >>> Auth.live
       val action = Auth.validateUser(userToken.signedString).provideLayer(service).run
       assertM(action)(fails(isSubtype[ValidationError](anything)))
@@ -54,6 +54,5 @@ object AuthServiceTest extends DefaultRunnableSpec {
   private val users = UsersMock.Empty
   private val repo = UsersRepositoryMock.Empty
   private val orgs = OrganizationParticipantsMock.Empty
-  private val crypto = CryptoMock.Empty
   private val google = GoogleAuthMock.Empty
 }

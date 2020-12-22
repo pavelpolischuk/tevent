@@ -24,7 +24,7 @@ object NotificationTest extends DefaultRunnableSpec {
     },
 
     testM("send emails to all subscribers of organization") {
-      val organizations = OrganizationsMock.Get(equalTo(organization.id), Expectation.value(organization))
+      val organizations = OrganizationsMock.Get(equalTo(organization.typedId), Expectation.value(organization))
       val participants = OrganizationParticipantsRepositoryMock.GetParticipants(
         equalTo(organization.id), Expectation.value(List((user, OrgManager), (user2, OrgSubscriber))))
       val notifier = organizations ++ participants ++ sender >>> Notification.live
