@@ -92,7 +92,7 @@ final class EventsEndpoint[R <: Services] {
       .in(
         query[Option[String]]("tags")
           .description("Tags to search")
-          .example(Some("it+dev+scala")).and(
+          .example(Some("it+dev")).and(
           query[Option[ZonedDateTime]]("fromDate")
             .description("Start datetime to search")
             .example(Some(dateSample))).and(
@@ -103,7 +103,7 @@ final class EventsEndpoint[R <: Services] {
             .description("Organization ID to search")
             .example(Some(42L))).and(
           query[Option[String]]("location")
-            .description("End datetime to search")
+            .description("Location to search")
             .example(Some("Moscow")))
       )
       .out(jsonBody[List[EventData]])

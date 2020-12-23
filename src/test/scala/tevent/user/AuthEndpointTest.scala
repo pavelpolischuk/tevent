@@ -23,31 +23,31 @@ object AuthEndpointTest extends DefaultRunnableSpec {
   override def spec: ZSpec[TestEnvironment, Any] = suite("AuthEndpoint")(
 
     testM("should signin user") {
-      val auth = AuthMock.SignIn(equalTo((userLogin.name.get, userLogin.email, userLogin.secret)), Expectation.value(userToken))
+      val auth = AuthMock.SignIn(equalTo((userSignin.name, userSignin.email, userSignin.secret)), Expectation.value(userToken))
       val postReq = Request[Task](Method.POST, uri"/signin")
-        .withEntity(userLogin.asJson)
+        .withEntity(userSignin.asJson)
       checkRequest(app.run(postReq), Status.Ok, Some(LoginData("Signed in", userToken.signedString)))
         .provideSomeLayer(auth)
     },
     testM("should fail signin existing email") {
-      val auth = AuthMock.SignIn(equalTo((userLogin.name.get, userLogin.email, userLogin.secret)),
+      val auth = AuthMock.SignIn(equalTo((userSignin.name, userSignin.email, userSignin.secret)),
         Expectation.failure(ValidationError("existing")))
       val postReq = Request[Task](Method.POST, uri"/signin")
-        .withEntity(userLogin.asJson)
+        .withEntity(userSignin.asJson)
       app.run(postReq).map(result => assert(result.status)(equalTo(Status.BadRequest)))
         .provideSomeLayer(auth)
     },
     testM("should login user") {
       val auth = AuthMock.Login(equalTo((userLogin.email, userLogin.secret)), Expectation.value(userToken))
       val postReq = Request[Task](Method.POST, uri"/login")
-        .withEntity(userLogin.copy(name=None).asJson)
+        .withEntity(userLogin.asJson)
       checkRequest(app.run(postReq), Status.Ok, Some(LoginData("Logged in", userToken.signedString)))
         .provideSomeLayer(auth)
     },
     testM("should fail bad login") {
-      val auth = AuthMock.SignIn(equalTo((userLogin.name.get, userLogin.email, userLogin.secret)),
+      val auth = AuthMock.Login(equalTo((userLogin.email, userLogin.secret)),
         Expectation.failure(ValidationError("Bad secret")))
-      val postReq = Request[Task](Method.POST, uri"/signin")
+      val postReq = Request[Task](Method.POST, uri"/login")
         .withEntity(userLogin.asJson)
       app.run(postReq).map(result => assert(result.status)(equalTo(Status.BadRequest)))
         .provideSomeLayer(auth)

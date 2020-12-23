@@ -11,7 +11,7 @@ import sttp.tapir.generic.auto._
 import tevent.core.ErrorMapper.errorResponse
 import tevent.core.{DomainError, ValidationError}
 import tevent.user.dto.LoginForm.TokenQueryParamMatcher
-import tevent.user.dto.{GoogleLoginForm, LoginData, LoginForm}
+import tevent.user.dto.{GoogleLoginForm, LoginData, LoginForm, SigninForm}
 import tevent.user.model.User
 import tevent.user.service.Auth
 import zio.interop.catz.taskConcurrentInstance
@@ -39,8 +39,8 @@ final class AuthEndpoint[R <: Auth] {
   })
 
   private val httpRoutes = HttpRoutes.of[Task] {
-    case request@POST -> Root / "signin" => request.decode[LoginForm] { form =>
-      Auth.signIn(form.name.getOrElse(""), form.email, form.secret).foldM(
+    case request@POST -> Root / "signin" => request.decode[SigninForm] { form =>
+      Auth.signIn(form.name, form.email, form.secret).foldM(
         failure = errorResponse,
         success = token => Ok(LoginData("Signed in", token.signedString))
       )
@@ -70,7 +70,7 @@ final class AuthEndpoint[R <: Auth] {
 
     val postSignin = endpoint.post
       .in(basePath / "signin")
-      .in(jsonBody[LoginForm])
+      .in(jsonBody[SigninForm])
       .out(jsonBody[LoginData].example(LoginData("Signed in", "token-value")))
 
     val postLogin = endpoint.post

@@ -8,7 +8,7 @@ import tevent.main.Environments.testEnvironment
 import tevent.main.Server
 import tevent.organizations.dto._
 import tevent.organizations.model.{OrgOwner, OrgSubscriber, Organization}
-import tevent.user.dto.{LoginData, LoginForm, UserData}
+import tevent.user.dto.{LoginData, LoginForm, SigninForm, UserData}
 import zio.console.Console
 import zio.test.Assertion._
 import zio.test.TestAspect.sequential
@@ -28,7 +28,7 @@ object TEventIntegrationTest extends DefaultRunnableSpec {
 
     testM("can sign-in, login & get user") {
       for {
-        response <- HttpClient.post[LoginForm, LoginData]("http://localhost:8080/api/v1/signin", userLogin)
+        response <- HttpClient.post[SigninForm, LoginData]("http://localhost:8080/api/v1/signin", userSignin)
         userId1 = response.token.split('.')(1).toLong
 
         response <- HttpClient.post[LoginForm, LoginData]("http://localhost:8080/api/v1/login", userLogin)
@@ -63,7 +63,7 @@ object TEventIntegrationTest extends DefaultRunnableSpec {
 
     testM("can join & leave organization") {
       for {
-        response <- HttpClient.post[LoginForm, LoginData]("http://localhost:8080/api/v1/signin", user2Login)
+        response <- HttpClient.post[SigninForm, LoginData]("http://localhost:8080/api/v1/signin", user2Signin)
         token2 = response.token
 
         _ <- HttpClient.post[OrgParticipationForm, Unit]("http://localhost:8080/api/v1/organizations/1/join", token2, OrgParticipationForm(OrgSubscriber))
