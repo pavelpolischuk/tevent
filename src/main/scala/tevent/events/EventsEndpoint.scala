@@ -5,14 +5,20 @@ import org.http4s.circe.CirceEntityCodec.{circeEntityDecoder, circeEntityEncoder
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.{AuthMiddleware, Router}
 import org.http4s.{AuthedRoutes, HttpRoutes}
+import sttp.tapir.EndpointIO.Example
+import sttp.tapir._
+import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto._
 import tevent.core.ErrorMapper.errorResponse
 import tevent.events.dto.EventFilters._
-import tevent.events.dto.{EventForm, EventIdVar, EventParticipationForm, EventUserParticipationData}
-import tevent.events.model.{Event, EventFilter, EventParticipation}
+import tevent.events.dto.{EventData, EventForm, EventIdVar, EventParticipationForm, EventUserParticipationData}
+import tevent.events.model.{Event, EventFilter, EventParticipation, EventSubscriber, OfflineParticipant, OnlineParticipant}
 import tevent.events.service.{EventParticipants, Events}
 import tevent.user.model.User
 import zio._
 import zio.interop.catz.taskConcurrentInstance
+
+import java.time.{ZoneOffset, ZonedDateTime}
 
 final class EventsEndpoint[R <: Services] {
   type Task[A] = RIO[R, A]
@@ -46,6 +52,10 @@ final class EventsEndpoint[R <: Services] {
       val event = Event(-1, form.organizationId, form.name, form.description, form.datetime, form.location, form.capacity, form.videoBroadcastLink, form.tags)
       Events.create(user.typedId, event).foldM(errorResponse, Ok(_))
     }
+    case request@PUT -> Root / EventIdVar(id) as user => request.req.decode[EventForm] { form =>
+      val event = Event(id.id, form.organizationId, form.name, form.description, form.datetime, form.location, form.capacity, form.videoBroadcastLink, form.tags)
+      Events.update(user.typedId, event).foldM(errorResponse, Ok(_))
+    }
 
     case GET -> Root / EventIdVar(id) / "users" as user =>
       EventParticipants.getUsers(user.typedId, id).foldM(errorResponse,
@@ -60,4 +70,78 @@ final class EventsEndpoint[R <: Services] {
 
   def routes(implicit middleware: AuthMiddleware[Task, User]): HttpRoutes[Task] =
     Router("/events" -> (httpRoutes <+> middleware(authedRoutes)))
+
+  def docRoutes(basePath: String): List[Endpoint[_, _, _, _]] = {
+
+    val eventId = path[Long]("eventId")
+    val dateSample = ZonedDateTime.of(1991, 12, 26, 12, 0, 0, 0, ZoneOffset.UTC)
+
+    val eventForm = jsonBody[EventForm]
+      .description("The event data")
+      .example(EventForm(42, "Event #1", "Event description", dateSample, Some("Moscow"), Some(128), None, List("tag1", "tag2")))
+
+    val authHeader = auth.bearer[String]()
+
+    val getEvent = endpoint.get
+      .in(basePath / "events")
+      .in(eventId)
+      .out(jsonBody[EventData])
+
+    val getEventList = endpoint.get
+      .in(basePath / "events")
+      .in(
+        query[Option[String]]("tags")
+          .description("Tags to search")
+          .example(Some("it+dev+scala")).and(
+          query[Option[ZonedDateTime]]("fromDate")
+            .description("Start datetime to search")
+            .example(Some(dateSample))).and(
+          query[Option[ZonedDateTime]]("toDate")
+            .description("End datetime to search")
+            .example(Some(dateSample))).and(
+          query[Option[Long]]("organizationId")
+            .description("Organization ID to search")
+            .example(Some(42L))).and(
+          query[Option[String]]("location")
+            .description("End datetime to search")
+            .example(Some("Moscow")))
+      )
+      .out(jsonBody[List[EventData]])
+
+
+    val postEvent = endpoint.post
+      .in(basePath / "events")
+      .in(authHeader)
+      .in(eventForm)
+      .out(jsonBody[Event])
+
+    val putEvent = endpoint.put
+      .in(basePath / "events")
+      .in(eventId)
+      .in(authHeader)
+      .in(eventForm)
+
+    val getUsers = endpoint.get
+      .in(basePath / "events")
+      .in(eventId)
+      .in("users")
+      .in(authHeader)
+      .out(jsonBody[List[EventUserParticipationData]])
+
+    val postJoin = endpoint.post
+      .in(basePath / "events")
+      .in(eventId)
+      .in("join")
+      .in(authHeader)
+      .in(jsonBody[EventParticipationForm]
+        .examples(List(EventSubscriber, OnlineParticipant, OfflineParticipant).map(t => Example.of(EventParticipationForm(t), Some(t.toString)))))
+
+    val postLeave = endpoint.post
+      .in(basePath / "events")
+      .in(eventId)
+      .in("leave")
+      .in(authHeader)
+
+    List(getEvent, getEventList, postEvent, putEvent, getUsers, postJoin, postLeave)
+  }
 }

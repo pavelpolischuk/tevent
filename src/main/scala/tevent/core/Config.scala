@@ -24,7 +24,7 @@ object Config {
       val http = HttpServerConfig(
         env.getOrElse("HOST", "0.0.0.0"),
         env.get("PORT").flatMap(_.toIntOption).getOrElse(8080),
-        env.getOrElse("ROOT_PATH", "/api/v1"),
+        env.getOrElse("ROOT_PATH", "api/v1"),
         env.getOrElse("AUTH_SECRET", "1122334455667788990011223344556677889900")
       )
 

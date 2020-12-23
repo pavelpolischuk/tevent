@@ -5,6 +5,9 @@ import org.http4s._
 import org.http4s.circe.CirceEntityCodec.{circeEntityDecoder, circeEntityEncoder}
 import org.http4s.dsl.Http4sDsl
 import org.http4s.headers.Authorization
+import sttp.tapir._
+import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto._
 import tevent.core.ErrorMapper.errorResponse
 import tevent.core.{DomainError, ValidationError}
 import tevent.user.dto.LoginForm.TokenQueryParamMatcher
@@ -57,9 +60,34 @@ final class AuthEndpoint[R <: Auth] {
     case GET -> Root / "auth" / "validate" :? TokenQueryParamMatcher(token) =>
       Auth.validateUser(token).foldM(
         failure = errorResponse,
-        success = _ => Ok("Ok")
+        success = _ => Ok("OK")
       )
   }
 
   def routes: HttpRoutes[Task] = httpRoutes
+
+  def docRoutes(basePath: String): List[Endpoint[_, _, _, _]] =  {
+
+    val postSignin = endpoint.post
+      .in(basePath / "signin")
+      .in(jsonBody[LoginForm])
+      .out(jsonBody[LoginData].example(LoginData("Signed in", "token-value")))
+
+    val postLogin = endpoint.post
+      .in(basePath / "login")
+      .in(jsonBody[LoginForm])
+      .out(jsonBody[LoginData].example(LoginData("Logged in", "token-value")))
+
+    val postGoogle = endpoint.post
+      .in(basePath / "auth" / "google")
+      .in(jsonBody[GoogleLoginForm])
+      .out(jsonBody[LoginData].example(LoginData("Logged in", "token-value")))
+
+    val getValidate = endpoint.get
+      .in(basePath / "auth" / "validate")
+      .in(query[String]("token").description("Token to validate"))
+      .out(stringBody.example("OK"))
+
+    List(postSignin, postLogin, postGoogle, getValidate)
+  }
 }

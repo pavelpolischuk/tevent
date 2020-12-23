@@ -2,15 +2,15 @@ package tevent.main
 
 import cats.data.Kleisli
 import cats.effect.ExitCode
+import cats.implicits.toSemigroupKOps
+import org.http4s.implicits.http4sKleisliResponseSyntaxOptionT
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.server.middleware.{AutoSlash, GZip}
 import org.http4s.server.{AuthMiddleware, Router}
 import org.http4s.{HttpRoutes, Request, Response}
 import tevent.core.Config
 import tevent.events.EventsEndpoint
-import Environments.AppEnvironment
-import cats.implicits.toSemigroupKOps
-import org.http4s.implicits.http4sKleisliResponseSyntaxOptionT
+import tevent.main.Environments.AppEnvironment
 import tevent.main.health.HealthEndpoint
 import tevent.organizations.OrganizationsEndpoint
 import tevent.user.model.User
@@ -36,19 +36,19 @@ object Server {
     }
       .orDie
 
-  def createRoutes(basePath: String): ServerRoutes = {
-    val authEndpoint = new AuthEndpoint[AppEnvironment]
+  def createRoutes(root: String): ServerRoutes = {
+    val auth = new AuthEndpoint[AppEnvironment]
 
-    implicit val auth: AuthMiddleware[ServerRIO, User] = AuthMiddleware(authEndpoint.authUser, authEndpoint.forbidden)
+    implicit val authMiddleware: AuthMiddleware[ServerRIO, User] = AuthMiddleware(auth.authUser, auth.forbidden)
 
-    val usersRoutes = new UserEndpoint[AppEnvironment].routes
-    val eventsRoutes = new EventsEndpoint[AppEnvironment].routes
-    val organizationsRoutes = new OrganizationsEndpoint[AppEnvironment].routes
-    val healthRoutes = new HealthEndpoint[AppEnvironment].routes
-    val authRoutes = authEndpoint.routes
-    val routes = usersRoutes <+> eventsRoutes <+> organizationsRoutes <+> healthRoutes <+> authRoutes
+    val users = new UserEndpoint[AppEnvironment]
+    val events = new EventsEndpoint[AppEnvironment]
+    val organizations = new OrganizationsEndpoint[AppEnvironment]
+    val health = new HealthEndpoint[AppEnvironment]
+    val docs = auth.docRoutes(root) ++ users.docRoutes(root) ++ organizations.docRoutes(root) ++ events.docRoutes(root)
+    val routes = users.routes <+> events.routes <+> organizations.routes <+> auth.routes <+> health.routes(root, docs)
 
-    Router[ServerRIO](basePath -> middleware(routes)).orNotFound
+    Router[ServerRIO](root -> middleware(routes)).orNotFound
   }
 
   private val middleware: HttpRoutes[ServerRIO] => HttpRoutes[ServerRIO] = {

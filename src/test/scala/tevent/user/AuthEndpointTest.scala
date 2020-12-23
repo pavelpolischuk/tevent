@@ -62,7 +62,7 @@ object AuthEndpointTest extends DefaultRunnableSpec {
     testM("should validate token") {
       val auth = AuthMock.ValidateUser(equalTo("123"), Expectation.value(user))
       val req = Request[Task](Method.GET, uri"/auth/validate?token=123")
-      checkRequest(app.run(req), Status.Ok, Some("Ok")).provideSomeLayer(auth)
+      checkRequest(app.run(req), Status.Ok, Some("OK")).provideSomeLayer(auth)
     },
     testM("should fail validate bad token") {
       val auth = AuthMock.ValidateUser(equalTo("123"), Expectation.failure(ValidationError("")))
