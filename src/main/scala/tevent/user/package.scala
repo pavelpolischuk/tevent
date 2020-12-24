@@ -1,6 +1,6 @@
 package tevent
 
-import tevent.core.Db
+import tevent.core.{Config, Db}
 import tevent.user.repository.{SlickUsersRepository, UsersRepository, UsersT}
 import tevent.user.service.{Auth, Crypto, GoogleAuth, Users}
 import zio.{URLayer, ZLayer}
@@ -13,6 +13,6 @@ package object user {
 
   val repositories: URLayer[Db with Tables, Repositories] =
     SlickUsersRepository.live
-  val services: URLayer[Clock with Crypto with Repositories, Services] =
-    (ZLayer.identity[Clock with Crypto with Repositories] >+> GoogleAuth.live >+> Users.live >+> Auth.live)
+  val services: URLayer[Clock with Config with Crypto with Repositories, Services] =
+    (ZLayer.identity[Clock with Config with Crypto with Repositories] >+> GoogleAuth.live >+> Users.live >+> Auth.live)
 }

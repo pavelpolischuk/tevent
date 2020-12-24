@@ -11,11 +11,13 @@ object Config {
 
   final case class GmailConfig(sender: String, secret: String)
 
-  final case class AppConfig(database: DbConfig, httpServer: HttpServerConfig, gmail: GmailConfig)
+  final case class AuthConfig(google: String)
+
+  final case class AppConfig(database: DbConfig, httpServer: HttpServerConfig, gmail: GmailConfig, authClients: AuthConfig)
 
   val fromFile: ULayer[Config] = ZIO
     .effect(ConfigSource.default.loadOrThrow[AppConfig])
-    .map(c => Has(c.database) ++ Has(c.httpServer) ++ Has(c.gmail))
+    .map(c => Has(c.database) ++ Has(c.httpServer) ++ Has(c.gmail) ++ Has(c.authClients))
     .orDie.toLayerMany
 
   val fromEnv: ULayer[Config] = ZIO
@@ -41,7 +43,11 @@ object Config {
         env.getOrElse("MSECRET", "")
       )
 
-      Has(db) ++ Has(http) ++ Has(gmail)
+      val auth = AuthConfig(
+        env.getOrElse("GOOGLE_CLIENT", "")
+      )
+
+      Has(db) ++ Has(http) ++ Has(gmail) ++ Has(auth)
     })
     .orDie.toLayerMany
 }
